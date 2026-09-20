@@ -59,7 +59,7 @@
   /* ---------- Sidebar ---------- */
   .sidebar {
     width: 240px; flex-shrink: 0;
-    background: var(--ink); color: var(--paper);
+    background: var(--line); color: var(--amber);
     display: flex; flex-direction: column;
     padding: 30px 0 22px;
     position: sticky; top: 0; height: 100vh;
@@ -71,11 +71,11 @@
   }
   .brand-name {
     font-family: var(--font-display); font-style: italic;
-    font-size: 21px; font-weight: 600; letter-spacing: 0.2px;
+    font-size: 30px; font-weight: 600; letter-spacing: 0.2px;
   }
   .brand-sub {
     display: block; font-family: var(--font-mono); font-style: normal;
-    font-size: 10px; letter-spacing: 0.09em; color: rgba(237,238,233,0.5);
+    font-size: 12px; letter-spacing: 0.09em; color: rgba(237,238,233,0.5);
     margin-top: 5px;
   }
 
@@ -83,12 +83,12 @@
   .tab {
     display: flex; align-items: center; gap: 11px; width: 100%;
     background: none; border: none; color: rgba(237,238,233,0.68);
-    font-family: var(--font-body); font-size: 14px; text-align: left;
+    font-family: var(--font-body); font-size: 16px; text-align: left;
     padding: 12px 26px; cursor: pointer; position: relative;
     border-left: 3px solid transparent;
   }
   .tab .glyph {
-    font-family: var(--font-mono); font-size: 11px;
+    font-family: var(--font-mono); font-size: 16px;
     color: rgba(237,238,233,0.4); width: 16px;
   }
   .tab:hover { color: var(--paper); background: rgba(255,255,255,0.045); }
@@ -97,14 +97,6 @@
     background: rgba(255,255,255,0.055); font-weight: 500;
   }
   .tab.active .glyph { color: var(--amber); }
-
-  .sidebar-foot {
-    padding: 16px 26px 0; margin-top: 8px;
-    border-top: 1px solid rgba(255,255,255,0.13);
-    font-family: var(--font-mono); font-size: 10.5px;
-    color: rgba(237,238,233,0.4); display: flex; align-items: center; gap: 7px;
-  }
-  .conn-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
 
   /* ---------- Main ---------- */
   main { flex: 1; min-width: 0; padding: 40px 44px 70px; }
@@ -117,7 +109,7 @@
   .section-head p { margin: 6px 0 0; color: var(--slate); font-size: 13.5px; max-width: 48ch; line-height: 1.5; }
 
   .btn {
-    font-family: var(--font-body); font-size: 13.5px; font-weight: 600;
+    font-family: var(--font-body); font-size: 16px; font-weight: 600;
     padding: 10px 18px; border-radius: var(--radius);
     border: 1px solid var(--amber); background: var(--amber); color: #2A1B04;
     cursor: default; white-space: nowrap;
@@ -130,9 +122,9 @@
   .stat {
     background: var(--panel); padding: 20px 22px;
   }
-  .stat .label { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.04em; color: var(--slate); }
-  .stat .value { font-family: var(--font-display); font-size: 27px; font-weight: 600; margin-top: 8px; }
-  .stat .delta { font-family: var(--font-mono); font-size: 11.5px; margin-top: 6px; color: var(--green); }
+  .stat .label { font-family: var(--font-mono); font-size: 16px; letter-spacing: 0.04em; color: var(--slate); }
+  .stat .value { font-family: var(--font-display); font-size: 30px; font-weight: 600; margin-top: 8px; }
+  .stat .delta { font-family: var(--font-mono); font-size: 15px; margin-top: 6px; color: var(--green); }
   .stat .delta.warn { color: var(--amber-ink); }
   @media (max-width: 900px) { .stat-row { grid-template-columns: repeat(2, 1fr); } }
 
@@ -142,22 +134,22 @@
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px 26px; }
   .panel + .panel { margin-top: 22px; }
   .panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
-  .panel h2 { font-family: var(--font-display); font-size: 16.5px; font-weight: 600; margin: 0; }
-  .panel .hint { color: var(--slate); font-size: 12.5px; margin: 4px 0 18px; line-height: 1.5; }
+  .panel h2 { font-family: var(--font-display); font-size: 20px; font-weight: 600; margin: 0; }
+  .panel .hint { color: var(--slate); font-size: 15px; margin: 4px 0 18px; line-height: 1.5; }
 
-  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
   thead th {
-    text-align: left; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.05em;
+    text-align: left; font-family: var(--font-mono); font-size: 14px; letter-spacing: 0.05em;
     color: var(--slate); font-weight: 500; padding: 0 12px 9px 0; border-bottom: 1px solid var(--line-strong);
   }
   tbody td { padding: 12px 12px 12px 0; border-bottom: 1px solid var(--line); vertical-align: top; color: var(--ink-soft); }
   tbody tr:last-child td { border-bottom: none; }
-  td.mono, .mono { font-family: var(--font-mono); font-size: 12.5px; }
+  td.mono, .mono { font-family: var(--font-mono); font-size: 15px; }
   td.strong { color: var(--ink); font-weight: 500; }
-  .sub { color: var(--slate); font-size: 12px; display: block; margin-top: 2px; }
+  .sub { color: var(--slate); font-size: 13px; display: block; margin-top: 2px; }
 
   .badge {
-    display: inline-block; font-family: var(--font-mono); font-size: 10px;
+    display: inline-block; font-family: var(--font-mono); font-size: 13px;
     padding: 3px 8px; border-radius: 2px; border: 1px solid var(--line-strong); color: var(--slate);
   }
   .badge.pendente { color: var(--amber-ink); border-color: var(--amber); background: var(--amber-wash); }
@@ -220,7 +212,6 @@
       <button class="tab" data-section="prazos"><span class="glyph">03</span> Prazos</button>
       <button class="tab" data-section="gastos"><span class="glyph">04</span> Gastos</button>
     </nav>
-    <div class="sidebar-foot"><span class="conn-dot"></span> Modo visual — sem conexão com API</div>
   </aside>
 
   <main id="main"></main>
@@ -240,7 +231,7 @@
       <div class="section-head">
         <div>
           <h1>Visão geral</h1>
-          <p>Resumo da operação da sua microempresa nesta semana.</p>
+          <p>Resumo da operação nesta semana.</p>
         </div>
         <button class="btn">+ Novo contrato</button>
       </div>
@@ -294,7 +285,7 @@
           </table>
         </div>
       </div>
-      <div class="footer-note">CONECTA.AI · PAINEL DA MICROEMPRESA · DADOS ILUSTRATIVOS</div>
+      <div class="footer-note">CONECTA.AI · PAINEL DA MICROEMPRESA</div>
     `;
   }
 
@@ -398,7 +389,7 @@
           <button class="btn" type="button">Salvar contrato</button>
         </form>
       </div>
-      <div class="footer-note">CONECTA.AI · PAINEL DA MICROEMPRESA · DADOS ILUSTRATIVOS</div>
+      <div class="footer-note">CONECTA.AI · PAINEL DA MICROEMPRESA</div>
     `;
   }
 
@@ -413,7 +404,7 @@
           <table>
             <thead><tr><th>Descrição</th><th>Contrato</th><th>Vence</th><th>Status</th></tr></thead>
             <tbody>
-              <tr><td class="strong">Ajustes finais de layout</td><td class="mono">#14</td><td class="mono">23/09</td><td><span class="badge atrasado">Atrasado</span></td></tr>
+              <tr><td class="strong">TESTE</td><td class="mono">#14</td><td class="mono">23/09</td><td><span class="badge atrasado">Atrasado</span></td></tr>
               <tr><td class="strong">Envio do relatório mensal</td><td class="mono">#09</td><td class="mono">25/09</td><td><span class="badge pendente">Pendente</span></td></tr>
               <tr><td class="strong">Entrega da 1ª versão</td><td class="mono">#21</td><td class="mono">02/10</td><td><span class="badge pendente">Pendente</span></td></tr>
               <tr><td class="strong">Publicação do site</td><td class="mono">#07</td><td class="mono">14/09</td><td><span class="badge concluido">Concluído</span></td></tr>
@@ -431,7 +422,7 @@
           </form>
         </div>
       </div>
-      <div class="footer-note">CONECTA.AI · PAINEL DA MICROEMPRESA · DADOS ILUSTRATIVOS</div>
+      <div class="footer-note">CONECTA.AI · PAINEL DA MICROEMPRESA</div>
     `;
   }
 
@@ -466,7 +457,7 @@
           </form>
         </div>
       </div>
-      <div class="footer-note">CONECTA.AI · PAINEL DA MICROEMPRESA · DADOS ILUSTRATIVOS</div>
+      <div class="footer-note">CONECTA.AI · PAINEL DA MICROEMPRESA</div>
     `;
   }
 
