@@ -17,5 +17,7 @@ O núcleo do sistema (Backend) já está estruturado com as regras de negócio e
 
 ## Próximos Passos (Pendências)
 - [ ] **Integração Cloud (Azure Blob Storage):** Desenvolver o script de upload para armazenar minutas de contratos e PDFs de comprovantes na nuvem da Microsoft, substituindo links fictícios por URLs reais e seguras.
+
 - [ ] **Frontend (Interface do Usuário):** Construir o Dashboard interativo utilizando HTML5, CSS3, Vanilla JavaScript e Bootstrap para consumir nossa API.
+- [ ] **Camada de Inteligência (IA):** Integração com LLM via API (Google Gemini) configurando o System Prompt para atuar como assistente de dúvidas do sistema.
 - [ ] **Segurança e Deploy:** Implementar hash de senhas (bcrypt), autenticação e realizar o deploy do banco e da API no Azure App Service.

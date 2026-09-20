@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Conecta.ai — Painel MEI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500;1,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1C2333;
+    --ink-soft: #3A4356;
+    --slate: #6B7280;
+    --paper: #EDEEE9;
+    --panel: #FFFFFF;
+    --line: #DEDCD1;
+    --line-strong: #C7C4B6;
+    --amber: #B9812F;
+    --amber-ink: #7A551D;
+    --amber-wash: #F3E7D2;
+    --red: #A23B2E;
+    --red-bg: #F6E9E7;
+    --green: #4C6E4F;
+    --green-bg: #E9EFE7;
+    --font-display: 'Lora', Georgia, serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+    --radius: 3px;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  :root:not([data-theme="light"]) {
+    @media (prefers-color-scheme: dark) {
+      --ink: #ECE9E0; --ink-soft: #C7C3B6; --slate: #98937F;
+      --paper: #14161B; --panel: #1C2027; --line: #2E323C; --line-strong: #454B58;
+      --amber: #D9A354; --amber-ink: #E8BE7C; --amber-wash: rgba(217,163,84,0.12);
+      --red: #E28A7A; --red-bg: #3A2420; --green: #8FB593; --green-bg: #1D2620;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #ECE9E0; --ink-soft: #C7C3B6; --slate: #98937F;
+    --paper: #14161B; --panel: #1C2027; --line: #2E323C; --line-strong: #454B58;
+    --amber: #D9A354; --amber-ink: #E8BE7C; --amber-wash: rgba(217,163,84,0.12);
+    --red: #E28A7A; --red-bg: #3A2420; --green: #8FB593; --green-bg: #1D2620;
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); height: 100%; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; height: 100%;
+    background: var(--paper); color: var(--ink);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app { display: flex; min-height: 100vh; }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar {
+    width: 240px; flex-shrink: 0;
+    background: var(--ink); color: var(--paper);
+    display: flex; flex-direction: column;
+    padding: 30px 0 22px;
+    position: sticky; top: 0; height: 100vh;
+  }
+  .brand {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 26px 22px; margin-bottom: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.13);
+  }
+  .brand-name {
+    font-family: var(--font-display); font-style: italic;
+    font-size: 21px; font-weight: 600; letter-spacing: 0.2px;
+  }
+  .brand-sub {
+    display: block; font-family: var(--font-mono); font-style: normal;
+    font-size: 10px; letter-spacing: 0.09em; color: rgba(237,238,233,0.5);
+    margin-top: 5px;
+  }
+
+  nav.tabs { padding-top: 6px; flex: 1; display: flex; flex-direction: column; gap: 1px; }
+  .tab {
+    display: flex; align-items: center; gap: 11px; width: 100%;
+    background: none; border: none; color: rgba(237,238,233,0.68);
+    font-family: var(--font-body); font-size: 14px; text-align: left;
+    padding: 12px 26px; cursor: pointer; position: relative;
+    border-left: 3px solid transparent;
+  }
+  .tab .glyph {
+    font-family: var(--font-mono); font-size: 11px;
+    color: rgba(237,238,233,0.4); width: 16px;
+  }
+  .tab:hover { color: var(--paper); background: rgba(255,255,255,0.045); }
+  .tab.active {
+    color: var(--paper); border-left-color: var(--amber);
+    background: rgba(255,255,255,0.055); font-weight: 500;
+  }
+  .tab.active .glyph { color: var(--amber); }
+
+  .sidebar-foot {
+    padding: 16px 26px 0; margin-top: 8px;
+    border-top: 1px solid rgba(255,255,255,0.13);
+    font-family: var(--font-mono); font-size: 10.5px;
+    color: rgba(237,238,233,0.4); display: flex; align-items: center; gap: 7px;
+  }
+  .conn-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+
+  /* ---------- Main ---------- */
+  main { flex: 1; min-width: 0; padding: 40px 44px 70px; }
+  .section-head {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 24px; margin-bottom: 30px; padding-bottom: 18px;
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .section-head h1 { font-family: var(--font-display); font-weight: 600; font-size: 29px; margin: 0; }
+  .section-head p { margin: 6px 0 0; color: var(--slate); font-size: 13.5px; max-width: 48ch; line-height: 1.5; }
+
+  .btn {
+    font-family: var(--font-body); font-size: 13.5px; font-weight: 600;
+    padding: 10px 18px; border-radius: var(--radius);
+    border: 1px solid var(--amber); background: var(--amber); color: #2A1B04;
+    cursor: default; white-space: nowrap;
+  }
+  .btn.secondary { background: transparent; color: var(--ink-soft); border-color: var(--line-strong); }
+  .btn.ghost { background: transparent; border-color: transparent; color: var(--amber-ink); padding-left: 0; padding-right: 0; }
+
+  /* ---------- Overview stat row ---------- */
+  .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); margin-bottom: 30px; border-radius: var(--radius); overflow: hidden; }
+  .stat {
+    background: var(--panel); padding: 20px 22px;
+  }
+  .stat .label { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.04em; color: var(--slate); }
+  .stat .value { font-family: var(--font-display); font-size: 27px; font-weight: 600; margin-top: 8px; }
+  .stat .delta { font-family: var(--font-mono); font-size: 11.5px; margin-top: 6px; color: var(--green); }
+  .stat .delta.warn { color: var(--amber-ink); }
+  @media (max-width: 900px) { .stat-row { grid-template-columns: repeat(2, 1fr); } }
+
+  .layout-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 26px; align-items: start; }
+  @media (max-width: 960px) { .layout-grid { grid-template-columns: 1fr; } }
+
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px 26px; }
+  .panel + .panel { margin-top: 22px; }
+  .panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+  .panel h2 { font-family: var(--font-display); font-size: 16.5px; font-weight: 600; margin: 0; }
+  .panel .hint { color: var(--slate); font-size: 12.5px; margin: 4px 0 18px; line-height: 1.5; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  thead th {
+    text-align: left; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.05em;
+    color: var(--slate); font-weight: 500; padding: 0 12px 9px 0; border-bottom: 1px solid var(--line-strong);
+  }
+  tbody td { padding: 12px 12px 12px 0; border-bottom: 1px solid var(--line); vertical-align: top; color: var(--ink-soft); }
+  tbody tr:last-child td { border-bottom: none; }
+  td.mono, .mono { font-family: var(--font-mono); font-size: 12.5px; }
+  td.strong { color: var(--ink); font-weight: 500; }
+  .sub { color: var(--slate); font-size: 12px; display: block; margin-top: 2px; }
+
+  .badge {
+    display: inline-block; font-family: var(--font-mono); font-size: 10px;
+    padding: 3px 8px; border-radius: 2px; border: 1px solid var(--line-strong); color: var(--slate);
+  }
+  .badge.pendente { color: var(--amber-ink); border-color: var(--amber); background: var(--amber-wash); }
+  .badge.atrasado { color: var(--red); border-color: var(--red); background: var(--red-bg); }
+  .badge.concluido, .badge.pago, .badge.ativo { color: var(--green); border-color: var(--green); background: var(--green-bg); }
+
+  form .field { margin-bottom: 15px; }
+  form label { display: block; font-size: 12px; font-weight: 600; color: var(--ink-soft); margin-bottom: 6px; }
+  form label .opt { font-weight: 400; color: var(--slate); }
+  input, select, textarea {
+    width: 100%; font-family: var(--font-body); font-size: 13.5px;
+    padding: 10px 11px; border: 1px solid var(--line-strong); border-radius: var(--radius);
+    background: var(--paper); color: var(--ink);
+  }
+  :root[data-theme="dark"] input, :root[data-theme="dark"] select, :root[data-theme="dark"] textarea { background: #10131A; }
+  textarea { resize: vertical; min-height: 64px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--amber-wash); color: var(--amber-ink);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 600; font-size: 12.5px;
+    margin-right: 10px; flex-shrink: 0;
+  }
+  .name-cell { display: flex; align-items: center; }
+
+  .footer-note {
+    margin-top: 34px; padding-top: 18px; border-top: 1px solid var(--line);
+    font-family: var(--font-mono); font-size: 11px; color: var(--slate); letter-spacing: 0.02em;
+  }
+
+  .menu-btn { display: none; }
+  @media (max-width: 780px) {
+    .app { flex-direction: column; }
+    .sidebar { position: sticky; top: 0; height: auto; width: 100%; flex-direction: row; align-items: center; padding: 14px 18px; z-index: 20; }
+    .brand { border: none; padding: 0; margin: 0; width: 100%; }
+    .brand-sub { display: none; }
+    nav.tabs { display: none; }
+    nav.tabs.open { display: flex; position: absolute; top: 58px; left: 0; right: 0; background: var(--ink); padding: 8px 0 14px; box-shadow: 0 10px 22px rgba(0,0,0,0.25); }
+    .sidebar-foot { display: none; }
+    .menu-btn { display: block; background: none; border: 1px solid rgba(255,255,255,0.3); color: var(--paper); border-radius: 3px; padding: 6px 11px; font-family: var(--font-mono); font-size: 12px; }
+    main { padding: 24px 18px 56px; }
+    .row2 { grid-template-columns: 1fr; }
+    .stat-row { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div><span class="brand-name">Conecta<span style="font-style:normal;">.ai</span></span><span class="brand-sub">PAINEL DA MEI</span></div>
+      <button class="menu-btn" id="menuBtn" aria-label="Abrir menu">☰</button>
+    </div>
+    <nav class="tabs" id="tabsNav">
+      <button class="tab active" data-section="visao"><span class="glyph">·</span> Visão geral</button>
+      <button class="tab" data-section="clientes"><span class="glyph">01</span> Clientes</button>
+      <button class="tab" data-section="contratos"><span class="glyph">02</span> Contratos</button>
+      <button class="tab" data-section="prazos"><span class="glyph">03</span> Prazos</button>
+      <button class="tab" data-section="gastos"><span class="glyph">04</span> Gastos</button>
+    </nav>
+    <div class="sidebar-foot"><span class="conn-dot"></span> Modo visual — sem conexão com API</div>
+  </aside>
+
+  <main id="main"></main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  const $main = document.getElementById('main');
+
+  function initials(name) {
+    return name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+  }
+
+  function renderVisao() {
+    $main.innerHTML = `
+      <div class="section-head">
+        <div>
+          <h1>Visão geral</h1>
+          <p>Resumo da operação da sua microempresa nesta semana.</p>
+        </div>
+        <button class="btn">+ Novo contrato</button>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat"><div class="label">CLIENTES ATIVOS</div><div class="value">12</div><div class="delta">+2 este mês</div></div>
+        <div class="stat"><div class="label">CONTRATOS EM ANDAMENTO</div><div class="value">7</div><div class="delta">3 encerram em 30 dias</div></div>
+        <div class="stat"><div class="label">PRAZOS PRÓXIMOS</div><div class="value">4</div><div class="delta warn">1 vence esta semana</div></div>
+        <div class="stat"><div class="label">GASTOS NO MÊS</div><div class="value">R$ 3.240</div><div class="delta warn">+18% vs. agosto</div></div>
+      </div>
+
+      <div class="layout-grid">
+        <div class="panel">
+          <div class="panel-head"><h2>Contratos recentes</h2><button class="btn ghost">ver todos</button></div>
+          <p class="hint">Últimos contratos cadastrados, com valor e status atual.</p>
+          <table>
+            <thead><tr><th>Cliente</th><th>Contrato</th><th>Valor</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr>
+                <td class="name-cell"><span class="avatar">RM</span>Renata Martins</td>
+                <td class="strong">Identidade visual + landing page</td>
+                <td class="mono">R$ 4.800,00</td>
+                <td><span class="badge ativo">Em andamento</span></td>
+              </tr>
+              <tr>
+                <td class="name-cell"><span class="avatar">OC</span>Oficina do Carlos</td>
+                <td class="strong">Sistema de agendamento</td>
+                <td class="mono">R$ 6.200,00</td>
+                <td><span class="badge pendente">Aguardando assinatura</span></td>
+              </tr>
+              <tr>
+                <td class="name-cell"><span class="avatar">PD</span>Padaria Dourada</td>
+                <td class="strong">Cardápio digital</td>
+                <td class="mono">R$ 1.950,00</td>
+                <td><span class="badge concluido">Concluído</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="panel">
+          <h2>Prazos da semana</h2>
+          <p class="hint">Entregas com vencimento nos próximos dias.</p>
+          <table>
+            <thead><tr><th>Entrega</th><th>Vence</th></tr></thead>
+            <tbody>
+              <tr><td class="strong">Ajustes finais — Oficina do Carlos<span class="sub">Contrato #14</span></td><td class="mono">23/09</td></tr>
+              <tr><td class="strong">Envio de relatório mensal<span class="sub">Contrato #09</span></td><td class="mono">25/09</td></tr>
+              <tr><td class="strong">Reunião de alinhamento<span class="sub">Contrato #14</span></td><td class="mono">27/09</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="footer-note">CONECTA.AI · PAINEL DA MICROEMPRESA · DADOS ILUSTRATIVOS</div>
+    `;
+  }
+
+  function renderClientes() {
+    const clientes = [
+      { nome: 'Renata Martins', email: 'renata.martins@gmail.com', tel: '(11) 98211-4432', doc: '389.201.440-21', desde: '02/03/2026' },
+      { nome: 'Oficina do Carlos', email: 'contato@oficinadocarlos.com.br', tel: '(11) 97765-2210', doc: '41.882.019/0001-05', desde: '18/04/2026' },
+      { nome: 'Padaria Dourada', email: 'financeiro@padariadourada.com.br', tel: '(11) 99034-7781', doc: '29.104.552/0001-88', desde: '30/05/2026' },
+      { nome: 'Instituto Vidaverde', email: 'projetos@vidaverde.org', tel: '(11) 96612-0093', doc: '18.220.774/0001-30', desde: '11/07/2026' },
+    ];
+    $main.innerHTML = `
+      <div class="section-head">
+        <div><h1>Clientes</h1><p>Contratantes cadastrados na sua base. O e-mail e o CNPJ/CPF identificam cada cliente de forma única.</p></div>
+        <button class="btn">+ Novo cliente</button>
+      </div>
+      <div class="layout-grid">
+        <div class="panel">
+          <h2>Base de clientes</h2>
+          <p class="hint">4 clientes cadastrados.</p>
+          <table>
+            <thead><tr><th>Nome</th><th>Contato</th><th>Documento</th><th>Desde</th></tr></thead>
+            <tbody>
+              ${clientes.map(c => `
+                <tr>
+                  <td class="name-cell"><span class="avatar">${initials(c.nome)}</span>${c.nome}</td>
+                  <td>${c.email}<span class="sub mono">${c.tel}</span></td>
+                  <td class="mono">${c.doc}</td>
+                  <td class="mono">${c.desde}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div class="panel">
+          <h2>Cadastrar cliente</h2>
+          <p class="hint">Os dados de acesso são enviados ao cliente por e-mail após o cadastro.</p>
+          <form>
+            <div class="field"><label>Nome</label><input placeholder="Nome completo ou razão social"></div>
+            <div class="field"><label>E-mail</label><input type="email" placeholder="cliente@email.com"></div>
+            <div class="field"><label>Senha provisória</label><input type="password" placeholder="••••••••"></div>
+            <div class="row2">
+              <div class="field"><label>Telefone <span class="opt">(opcional)</span></label><input placeholder="(11) 90000-0000"></div>
+              <div class="field"><label>CNPJ/CPF <span class="opt">(opcional)</span></label><input placeholder="000.000.000-00"></div>
+            </div>
+            <button class="btn" type="button">Salvar cliente</button>
+          </form>
+        </div>
+      </div>
+      <div class="footer-note">CONECTA.AI · PAINEL DA MICROEMPRESA · DADOS ILUSTRATIVOS</div>
+    `;
+  }
+
+  function renderContratos() {
+    $main.innerHTML = `
+      <div class="section-head">
+        <div><h1>Contratos</h1><p>Consulte os contratos de um cliente ou registre um novo, com valor, prazos e link da minuta.</p></div>
+      </div>
+      <div class="panel">
+        <div class="row2" style="align-items:flex-end;">
+          <div class="field"><label>Ver contratos do cliente</label>
+            <select><option>Oficina do Carlos</option><option>Renata Martins</option><option>Padaria Dourada</option></select>
+          </div>
+          <button class="btn secondary" type="button">Buscar</button>
+        </div>
+        <table style="margin-top:6px;">
+          <thead><tr><th>Título</th><th>Valor</th><th>Status</th><th>Início</th><th>Término</th><th>Minuta</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="strong">Sistema de agendamento<span class="sub">Módulo de clientes + notificações por WhatsApp</span></td>
+              <td class="mono">R$ 6.200,00</td>
+              <td><span class="badge ativo">Em andamento</span></td>
+              <td class="mono">18/08/2026</td>
+              <td class="mono">30/11/2026</td>
+              <td><span style="color:var(--amber-ink)">abrir</span></td>
+            </tr>
+            <tr>
+              <td class="strong">Manutenção mensal<span class="sub">Suporte e pequenos ajustes</span></td>
+              <td class="mono">R$ 450,00</td>
+              <td><span class="badge pendente">Aguardando assinatura</span></td>
+              <td class="mono">01/10/2026</td>
+              <td class="mono">—</td>
+              <td>—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="panel">
+        <h2>Novo contrato</h2>
+        <form>
+          <div class="field"><label>Cliente</label><select><option>Oficina do Carlos</option><option>Renata Martins</option></select></div>
+          <div class="field"><label>Título</label><input placeholder="Ex.: Sistema de agendamento"></div>
+          <div class="field"><label>Descrição <span class="opt">(opcional)</span></label><textarea placeholder="Escopo do serviço"></textarea></div>
+          <div class="row2">
+            <div class="field"><label>Valor total (R$)</label><input placeholder="0,00"></div>
+            <div class="field"><label>Link da minuta <span class="opt">(opcional)</span></label><input placeholder="https://…"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>Data de início <span class="opt">(opcional)</span></label><input placeholder="dd/mm/aaaa"></div>
+            <div class="field"><label>Data de término <span class="opt">(opcional)</span></label><input placeholder="dd/mm/aaaa"></div>
+          </div>
+          <button class="btn" type="button">Salvar contrato</button>
+        </form>
+      </div>
+      <div class="footer-note">CONECTA.AI · PAINEL DA MICROEMPRESA · DADOS ILUSTRATIVOS</div>
+    `;
+  }
+
+  function renderPrazos() {
+    $main.innerHTML = `
+      <div class="section-head">
+        <div><h1>Prazos</h1><p>Acompanhe as entregas combinadas com cada cliente.</p></div>
+      </div>
+      <div class="layout-grid">
+        <div class="panel">
+          <h2>Prazos em aberto</h2>
+          <table>
+            <thead><tr><th>Descrição</th><th>Contrato</th><th>Vence</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td class="strong">Ajustes finais de layout</td><td class="mono">#14</td><td class="mono">23/09</td><td><span class="badge atrasado">Atrasado</span></td></tr>
+              <tr><td class="strong">Envio do relatório mensal</td><td class="mono">#09</td><td class="mono">25/09</td><td><span class="badge pendente">Pendente</span></td></tr>
+              <tr><td class="strong">Entrega da 1ª versão</td><td class="mono">#21</td><td class="mono">02/10</td><td><span class="badge pendente">Pendente</span></td></tr>
+              <tr><td class="strong">Publicação do site</td><td class="mono">#07</td><td class="mono">14/09</td><td><span class="badge concluido">Concluído</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="panel">
+          <h2>Novo prazo</h2>
+          <form>
+            <div class="field"><label>ID do contrato</label><input placeholder="Ex.: 14"></div>
+            <div class="field"><label>Descrição</label><input placeholder="Ex.: Entrega da 1ª versão"></div>
+            <div class="field"><label>Data limite</label><input placeholder="dd/mm/aaaa"></div>
+            <div class="field"><label>Status</label><select><option>Pendente</option><option>Concluído</option><option>Atrasado</option></select></div>
+            <button class="btn" type="button">Salvar prazo</button>
+          </form>
+        </div>
+      </div>
+      <div class="footer-note">CONECTA.AI · PAINEL DA MICROEMPRESA · DADOS ILUSTRATIVOS</div>
+    `;
+  }
+
+  function renderGastos() {
+    $main.innerHTML = `
+      <div class="section-head">
+        <div><h1>Gastos</h1><p>Registre despesas associadas a cada contrato e mantenha o comprovante junto ao lançamento.</p></div>
+      </div>
+      <div class="layout-grid">
+        <div class="panel">
+          <h2>Últimos lançamentos</h2>
+          <table>
+            <thead><tr><th>Descrição</th><th>Contrato</th><th>Valor</th><th>Data</th></tr></thead>
+            <tbody>
+              <tr><td class="strong">Hospedagem Azure — setembro</td><td class="mono">#14</td><td class="mono">R$ 189,00</td><td class="mono">01/09</td></tr>
+              <tr><td class="strong">Licença de fonte comercial</td><td class="mono">#09</td><td class="mono">R$ 340,00</td><td class="mono">08/09</td></tr>
+              <tr><td class="strong">Transporte — reunião presencial</td><td class="mono">#21</td><td class="mono">R$ 62,00</td><td class="mono">15/09</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="panel">
+          <h2>Novo gasto</h2>
+          <form>
+            <div class="field"><label>ID do contrato</label><input placeholder="Ex.: 14"></div>
+            <div class="field"><label>Descrição</label><input placeholder="Ex.: Hospedagem Azure"></div>
+            <div class="row2">
+              <div class="field"><label>Valor (R$)</label><input placeholder="0,00"></div>
+              <div class="field"><label>Data do gasto</label><input placeholder="dd/mm/aaaa"></div>
+            </div>
+            <div class="field"><label>Link do comprovante <span class="opt">(opcional)</span></label><input placeholder="https://…"></div>
+            <button class="btn" type="button">Salvar gasto</button>
+          </form>
+        </div>
+      </div>
+      <div class="footer-note">CONECTA.AI · PAINEL DA MICROEMPRESA · DADOS ILUSTRATIVOS</div>
+    `;
+  }
+
+  const sections = { visao: renderVisao, clientes: renderClientes, contratos: renderContratos, prazos: renderPrazos, gastos: renderGastos };
+
+  function goTo(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.section === name));
+    document.getElementById('tabsNav').classList.remove('open');
+    sections[name]();
+  }
+  document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => goTo(t.dataset.section)));
+  document.getElementById('menuBtn').addEventListener('click', () => document.getElementById('tabsNav').classList.toggle('open'));
+
+  goTo('visao');
+})();
+</script>
+</body>
+</html>
