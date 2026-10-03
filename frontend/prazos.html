@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Conecta.ai — Prazos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500;1,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div><span class="brand-name">Conecta<span style="font-style:normal;">.ai</span></span><span class="brand-sub">PAINEL DA MEI</span></div>
+      <button class="menu-btn" id="menuBtn" aria-label="Abrir menu">☰</button>
+    </div>
+    <nav class="tabs" id="tabsNav">
+      <a class="tab" href="index.html"><span class="glyph">·</span> Visão geral</a>
+      <a class="tab" href="clientes.html"><span class="glyph">01</span> Clientes</a>
+      <a class="tab" href="contratos.html"><span class="glyph">02</span> Contratos</a>
+      <a class="tab active" href="prazos.html"><span class="glyph">03</span> Prazos</a>
+      <a class="tab" href="gastos.html"><span class="glyph">04</span> Gastos</a>
+    </nav>
+  </aside>
+
+  <main>
+    <div id="erro"></div>
+
+    <div class="section-head">
+      <div><h1>Prazos</h1><p>Acompanhe as entregas combinadas com cada cliente.</p></div>
+    </div>
+
+    <div class="layout-grid">
+      <div class="panel">
+        <h2>Prazos cadastrados</h2>
+        <div id="listaPrazos"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Novo prazo</h2>
+        <p class="hint" id="semContratos" hidden>Cadastre um contrato antes de criar prazos.</p>
+        <form id="formPrazo">
+          <div class="field"><label>Contrato</label><select name="contrato_id" id="selContrato" required></select></div>
+          <div class="field"><label>Descrição</label><input name="descricao" required placeholder="Ex.: Entrega da 1ª versão"></div>
+          <div class="field"><label>Data limite</label><input name="data_limite" type="date" required></div>
+          <div class="field"><label>Status</label><select name="status"><option>Pendente</option><option>Concluído</option></select></div>
+          <button class="btn" type="submit">Salvar prazo</button>
+        </form>
+      </div>
+    </div>
+    <div class="footer-note">CONECTA.AI · PAINEL DA MICROEMPRESA</div>
+  </main>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="js/common.js"></script>
+<script src="js/prazos.js"></script>
+</body>
+</html>

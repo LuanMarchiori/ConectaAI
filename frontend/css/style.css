@@ -1,0 +1,219 @@
+:root {
+  --ink: #1C2333;
+  --ink-soft: #3A4356;
+  --slate: #6B7280;
+  --paper: #EDEEE9;
+  --panel: #FFFFFF;
+  --line: #DEDCD1;
+  --line-strong: #C7C4B6;
+  --amber: #B9812F;
+  --amber-ink: #7A551D;
+  --amber-wash: #F3E7D2;
+  --red: #A23B2E;
+  --red-bg: #F6E9E7;
+  --green: #4C6E4F;
+  --green-bg: #E9EFE7;
+  --font-display: 'Lora', Georgia, serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+  --radius: 3px;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Tema escuro automático (segue o sistema) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #ECE9E0; --ink-soft: #C7C3B6; --slate: #98937F;
+    --paper: #14161B; --panel: #1C2027; --line: #2E323C; --line-strong: #454B58;
+    --amber: #D9A354; --amber-ink: #E8BE7C; --amber-wash: rgba(217,163,84,0.12);
+    --red: #E28A7A; --red-bg: #3A2420; --green: #8FB593; --green-bg: #1D2620;
+  }
+  :root:not([data-theme="light"]) input,
+  :root:not([data-theme="light"]) select,
+  :root:not([data-theme="light"]) textarea { background: #10131A; }
+}
+:root[data-theme="dark"] {
+  --ink: #ECE9E0; --ink-soft: #C7C3B6; --slate: #98937F;
+  --paper: #14161B; --panel: #1C2027; --line: #2E323C; --line-strong: #454B58;
+  --amber: #D9A354; --amber-ink: #E8BE7C; --amber-wash: rgba(217,163,84,0.12);
+  --red: #E28A7A; --red-bg: #3A2420; --green: #8FB593; --green-bg: #1D2620;
+}
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] textarea { background: #10131A; }
+
+html { scroll-padding-top: env(safe-area-inset-top, 0px); height: 100%; }
+* { box-sizing: border-box; }
+body {
+  margin: 0; height: 100%;
+  background: var(--paper); color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+.app { display: flex; min-height: 100vh; }
+
+/* ---------- Menu lateral ---------- */
+.sidebar {
+  width: 240px; flex-shrink: 0;
+  background: var(--line); color: var(--amber);
+  display: flex; flex-direction: column;
+  padding: 30px 0 22px;
+  position: sticky; top: 0; height: 100vh;
+}
+.brand {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 26px 22px; margin-bottom: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.13);
+}
+.brand-name {
+  font-family: var(--font-display); font-style: italic;
+  font-size: 30px; font-weight: 600; letter-spacing: 0.2px;
+}
+.brand-sub {
+  display: block; font-family: var(--font-mono); font-style: normal;
+  font-size: 12px; letter-spacing: 0.09em; color: rgba(237,238,233,0.5);
+  margin-top: 5px;
+}
+
+nav.tabs { padding-top: 6px; flex: 1; display: flex; flex-direction: column; gap: 1px; }
+.tab {
+  display: flex; align-items: center; gap: 11px; width: 100%;
+  background: none; border: none; color: rgba(237,238,233,0.68);
+  font-family: var(--font-body); font-size: 16px; text-align: left;
+  text-decoration: none;
+  padding: 12px 26px; cursor: pointer; position: relative;
+  border-left: 3px solid transparent;
+}
+.tab .glyph {
+  font-family: var(--font-mono); font-size: 16px;
+  color: rgba(237,238,233,0.4); width: 16px;
+}
+.tab:hover { color: var(--paper); background: rgba(255,255,255,0.045); }
+.tab.active {
+  color: var(--paper); border-left-color: var(--amber);
+  background: rgba(255,255,255,0.055); font-weight: 500;
+}
+.tab.active .glyph { color: var(--amber); }
+
+/* ---------- Área principal ---------- */
+main { flex: 1; min-width: 0; padding: 40px 44px 70px; }
+.section-head {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 24px; margin-bottom: 30px; padding-bottom: 18px;
+  border-bottom: 1px solid var(--line-strong);
+}
+.section-head h1 { font-family: var(--font-display); font-weight: 600; font-size: 29px; margin: 0; }
+.section-head p { margin: 6px 0 0; color: var(--slate); font-size: 13.5px; max-width: 48ch; line-height: 1.5; }
+
+/* ---------- Botões ---------- */
+.btn {
+  display: inline-block; text-decoration: none;
+  font-family: var(--font-body); font-size: 16px; font-weight: 600;
+  padding: 10px 18px; border-radius: var(--radius);
+  border: 1px solid var(--amber); background: var(--amber); color: #2A1B04;
+  cursor: pointer; white-space: nowrap;
+}
+.btn:disabled { opacity: .6; cursor: wait; }
+.btn.secondary { background: transparent; color: var(--ink-soft); border-color: var(--line-strong); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--amber-ink); padding-left: 0; padding-right: 0; }
+.btn.small { font-size: 13px; padding: 5px 10px; }
+
+/* ---------- Números da visão geral ---------- */
+.stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); margin-bottom: 30px; border-radius: var(--radius); overflow: hidden; }
+.stat { background: var(--panel); padding: 20px 22px; }
+.stat .label { font-family: var(--font-mono); font-size: 16px; letter-spacing: 0.04em; color: var(--slate); }
+.stat .value { font-family: var(--font-display); font-size: 30px; font-weight: 600; margin-top: 8px; }
+.stat .delta { font-family: var(--font-mono); font-size: 15px; margin-top: 6px; color: var(--green); }
+.stat .delta.warn { color: var(--amber-ink); }
+@media (max-width: 900px) { .stat-row { grid-template-columns: repeat(2, 1fr); } }
+
+/* ---------- Painéis e grade ---------- */
+.layout-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 26px; align-items: start; }
+@media (max-width: 960px) { .layout-grid { grid-template-columns: 1fr; } }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px 26px; }
+.panel + .panel { margin-top: 22px; }
+.panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+.panel h2 { font-family: var(--font-display); font-size: 20px; font-weight: 600; margin: 0; }
+.panel .hint { color: var(--slate); font-size: 15px; margin: 4px 0 18px; line-height: 1.5; }
+
+/* ---------- Tabelas ---------- */
+table { width: 100%; border-collapse: collapse; font-size: 15px; }
+thead th {
+  text-align: left; font-family: var(--font-mono); font-size: 14px; letter-spacing: 0.05em;
+  color: var(--slate); font-weight: 500; padding: 0 12px 9px 0; border-bottom: 1px solid var(--line-strong);
+}
+tbody td { padding: 12px 12px 12px 0; border-bottom: 1px solid var(--line); vertical-align: top; color: var(--ink-soft); }
+tbody tr:last-child td { border-bottom: none; }
+td.mono, .mono { font-family: var(--font-mono); font-size: 15px; }
+td.strong { color: var(--ink); font-weight: 500; }
+.sub { color: var(--slate); font-size: 13px; display: block; margin-top: 2px; }
+.empty { color: var(--slate); font-size: 15px; padding: 18px 0 6px; }
+a.link { color: var(--amber-ink); }
+
+/* ---------- Etiquetas de status ---------- */
+.badge {
+  display: inline-block; font-family: var(--font-mono); font-size: 13px;
+  padding: 3px 8px; border-radius: 2px; border: 1px solid var(--line-strong); color: var(--slate);
+}
+.badge.pendente { color: var(--amber-ink); border-color: var(--amber); background: var(--amber-wash); }
+.badge.atrasado { color: var(--red); border-color: var(--red); background: var(--red-bg); }
+.badge.concluido, .badge.pago, .badge.ativo { color: var(--green); border-color: var(--green); background: var(--green-bg); }
+
+/* ---------- Formulários ---------- */
+form .field { margin-bottom: 15px; }
+form label { display: block; font-size: 12px; font-weight: 600; color: var(--ink-soft); margin-bottom: 6px; }
+form label .opt { font-weight: 400; color: var(--slate); }
+input, select, textarea {
+  width: 100%; font-family: var(--font-body); font-size: 13.5px;
+  padding: 10px 11px; border: 1px solid var(--line-strong); border-radius: var(--radius);
+  background: var(--paper); color: var(--ink);
+}
+textarea { resize: vertical; min-height: 64px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* ---------- Avatar com iniciais ---------- */
+.avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--amber-wash); color: var(--amber-ink);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 600; font-size: 12.5px;
+  margin-right: 10px; flex-shrink: 0;
+}
+.name-cell { display: flex; align-items: center; }
+
+.footer-note {
+  margin-top: 34px; padding-top: 18px; border-top: 1px solid var(--line);
+  font-family: var(--font-mono); font-size: 11px; color: var(--slate); letter-spacing: 0.02em;
+}
+
+/* ---------- Aviso (sucesso / erro) ---------- */
+#toast {
+  position: fixed; right: 24px; bottom: 24px; z-index: 50; max-width: 360px;
+  padding: 12px 16px; border-radius: var(--radius); font-size: 14px; line-height: 1.4;
+  border: 1px solid var(--green); background: var(--green-bg); color: var(--green);
+  box-shadow: 0 8px 22px rgba(0,0,0,0.18);
+  opacity: 0; transform: translateY(8px); pointer-events: none;
+  transition: opacity .2s, transform .2s;
+}
+#toast.show { opacity: 1; transform: none; }
+#toast.err { border-color: var(--red); background: var(--red-bg); color: var(--red); }
+
+/* ---------- Celular ---------- */
+.menu-btn { display: none; }
+@media (max-width: 780px) {
+  .app { flex-direction: column; }
+  .sidebar { position: sticky; top: 0; height: auto; width: 100%; flex-direction: row; align-items: center; padding: 14px 18px; z-index: 20; }
+  .brand { border: none; padding: 0; margin: 0; width: 100%; }
+  .brand-sub { display: none; }
+  nav.tabs { display: none; }
+  nav.tabs.open { display: flex; position: absolute; top: 58px; left: 0; right: 0; background: var(--ink); padding: 8px 0 14px; box-shadow: 0 10px 22px rgba(0,0,0,0.25); }
+  .menu-btn { display: block; background: none; border: 1px solid rgba(255,255,255,0.3); color: var(--paper); border-radius: 3px; padding: 6px 11px; font-family: var(--font-mono); font-size: 12px; }
+  main { padding: 24px 18px 56px; }
+  .row2 { grid-template-columns: 1fr; }
+  .stat-row { grid-template-columns: 1fr 1fr; }
+  #toast { left: 18px; right: 18px; max-width: none; }
+}

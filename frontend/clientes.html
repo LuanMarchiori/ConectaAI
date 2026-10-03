@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Conecta.ai — Clientes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500;1,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div><span class="brand-name">Conecta<span style="font-style:normal;">.ai</span></span><span class="brand-sub">PAINEL DA MEI</span></div>
+      <button class="menu-btn" id="menuBtn" aria-label="Abrir menu">☰</button>
+    </div>
+    <nav class="tabs" id="tabsNav">
+      <a class="tab" href="index.html"><span class="glyph">·</span> Visão geral</a>
+      <a class="tab active" href="clientes.html"><span class="glyph">01</span> Clientes</a>
+      <a class="tab" href="contratos.html"><span class="glyph">02</span> Contratos</a>
+      <a class="tab" href="prazos.html"><span class="glyph">03</span> Prazos</a>
+      <a class="tab" href="gastos.html"><span class="glyph">04</span> Gastos</a>
+    </nav>
+  </aside>
+
+  <main>
+    <div id="erro"></div>
+
+    <div class="section-head">
+      <div><h1>Clientes</h1><p>Contratantes cadastrados na sua base. O e-mail e o CNPJ/CPF identificam cada cliente de forma única.</p></div>
+    </div>
+
+    <div class="layout-grid">
+      <div class="panel">
+        <h2>Base de clientes</h2>
+        <p class="hint" id="contagem">Carregando…</p>
+        <div id="listaClientes"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Cadastrar cliente</h2>
+        <p class="hint">Defina uma senha provisória para o acesso do cliente.</p>
+        <form id="formCliente">
+          <div class="field"><label>Nome</label><input name="nome" required placeholder="Nome completo ou razão social"></div>
+          <div class="field"><label>E-mail</label><input name="email" type="email" required placeholder="cliente@email.com"></div>
+          <div class="field"><label>Senha provisória</label><input name="senha" type="password" required minlength="6" placeholder="••••••••"></div>
+          <div class="row2">
+            <div class="field"><label>Telefone <span class="opt">(opcional)</span></label><input name="telefone" placeholder="(11) 90000-0000"></div>
+            <div class="field"><label>CNPJ/CPF <span class="opt">(opcional)</span></label><input name="cnpj_cpf" placeholder="000.000.000-00"></div>
+          </div>
+          <button class="btn" type="submit">Salvar cliente</button>
+        </form>
+      </div>
+    </div>
+    <div class="footer-note">CONECTA.AI · PAINEL DA MICROEMPRESA</div>
+  </main>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="js/common.js"></script>
+<script src="js/clientes.js"></script>
+</body>
+</html>
