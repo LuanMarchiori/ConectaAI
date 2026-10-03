@@ -1,6 +1,6 @@
 # Dashboard MEI - Sistema de Gestão 🚀
 
-Projeto extensionista desenvolvido para o curso de Análise e Desenvolvimento de Sistemas da PUCPR. O objetivo é fornecer uma solução tecnológica e segura para microempreendedores individuais (MEIs) gerenciarem contratos, prazos e gastos com total transparência para seus clientes.
+Projeto extensionista desenvolvido para o curso de Inteligência Artificial da PUCPR. O objetivo é fornecer uma solução tecnológica e segura para microempreendedores individuais (MEIs) gerenciarem contratos, prazos e gastos com total transparência para seus clientes.
 
 ## Tecnologias Utilizadas até o Momento
 * **Backend:** Python, FastAPI, Uvicorn, Pydantic.
