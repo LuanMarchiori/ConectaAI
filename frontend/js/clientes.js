@@ -6,7 +6,7 @@
 
   async function carregar() {
     try {
-      const clientes = await api('/clientes');
+      const clientes = await api('/clientes'); // GARANTIA DE SEM BARRA FINAL
       limparErro();
       const n = clientes.length;
       $('contagem').textContent = `${n} cliente${n === 1 ? '' : 's'} cadastrado${n === 1 ? '' : 's'}.`;
@@ -28,7 +28,8 @@
     }
   }
 
-  ligarForm('formCliente', fd => api('/clientes', {
+  // Liga o formulário de criação de cliente
+  ligarForm('formCliente', fd => api('/clientes', {  // GARANTIA DE SEM BARRA FINAL
     method: 'POST',
     body: JSON.stringify({
       nome: campo(fd, 'nome').trim(),

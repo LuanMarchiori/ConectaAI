@@ -69,5 +69,84 @@
     }
   }
 
+  // ========================================== //
+  // LÓGICA DO CHATBOT GEMINI                   //
+  // ========================================== //
+  const btnChat = $('btnChat');
+  const janelaChat = $('janelaChat');
+  const fecharChat = $('fecharChat');
+  const formChat = $('formChat');
+  const inputChat = $('inputChat');
+  const mensagensChat = $('mensagensChat');
+  const btnEnviarChat = $('btnEnviarChat');
+
+  // Alterna a visibilidade da janela
+  if (btnChat) {
+      btnChat.addEventListener('click', () => {
+        janelaChat.style.display = janelaChat.style.display === 'none' ? 'flex' : 'none';
+        if (janelaChat.style.display === 'flex') inputChat.focus();
+      });
+  }
+  
+  if(fecharChat) {
+      fecharChat.addEventListener('click', () => janelaChat.style.display = 'none');
+  }
+
+  // Função para adicionar balões de mensagem na tela
+  function addMensagem(texto, remetente) {
+    const div = document.createElement('div');
+    div.style.padding = '12px';
+    div.style.borderRadius = '8px';
+    div.style.maxWidth = '85%';
+    div.style.lineHeight = '1.4';
+
+    if (remetente === 'usuario') {
+      div.style.background = 'var(--ink)';
+      div.style.color = 'var(--paper)';
+      div.style.alignSelf = 'flex-end';
+    } else {
+      div.style.background = 'var(--amber-wash)';
+      div.style.color = 'var(--amber-ink)';
+      div.style.alignSelf = 'flex-start';
+    }
+    
+    // Converte quebras de linha em <br> para manter a formatação
+    div.innerHTML = esc(texto).replace(/\n/g, '<br>');
+    mensagensChat.appendChild(div);
+    mensagensChat.scrollTop = mensagensChat.scrollHeight;
+  }
+
+  // Envia a mensagem para a API
+  if (formChat) {
+      formChat.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const msg = inputChat.value.trim();
+        if (!msg) return;
+
+        // Coloca a mensagem do usuário na tela e bloqueia o input temporariamente
+        addMensagem(msg, 'usuario');
+        inputChat.value = '';
+        inputChat.disabled = true;
+        btnEnviarChat.disabled = true;
+
+        try {
+          // Faz a requisição POST para a nossa rota do FastAPI
+          const resp = await api('/chat', {
+            method: 'POST',
+            body: JSON.stringify({ mensagem: msg })
+          });
+          addMensagem(resp.resposta, 'ia');
+        } catch (err) {
+          addMensagem('Desculpe, ocorreu um erro ao contactar a IA.', 'ia');
+          console.error(err);
+        } finally {
+          inputChat.disabled = false;
+          btnEnviarChat.disabled = false;
+          inputChat.focus();
+        }
+      });
+  }
+
+  // Inicia o carregamento da página
   carregar();
 })();
