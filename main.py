@@ -30,14 +30,15 @@ app.add_middleware(
 
 BASE_DIR = Path(__file__).resolve().parent
 
-# Cria uma função para conectar ao meu banco do MySQL
+# Cria uma função para conectar ao meu banco do MySQL (Dinâmica para Nuvem/Local)
 def get_db_connection():
     try:
         conn = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="r6mc0ilfL@",
-            database="mei_dashboard"
+            host=os.getenv("DB_HOST", "localhost"),
+            user=os.getenv("DB_USER", "root"),
+            password=os.getenv("DB_PASS", "r6mc0ilfL@"),
+            database=os.getenv("DB_NAME", "mei_dashboard"),
+            port=os.getenv("DB_PORT", 3306)
         )
         return conn
     except mysql.connector.Error as err:
