@@ -8,6 +8,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from dotenv import load_dotenv
+from google import genai
+from google.genai import types
+
+# Carrega as variáveis de ambiente do arquivo .env
+load_dotenv()
+
+# Inicia o cliente da nova biblioteca
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+
 app = FastAPI(title="API - Dashboard MEI")
 
 # em produção precisamos trocar o "*" pelo link real.
@@ -19,7 +29,6 @@ app.add_middleware(
 )
 
 BASE_DIR = Path(__file__).resolve().parent
-
 
 # Cria uma função para conectar ao meu banco do MySQL
 def get_db_connection():
@@ -42,16 +51,13 @@ def conectar_ou_erro():
         raise HTTPException(status_code=500, detail="Erro de conexão com o banco")
     return conn
 
-
 # Rota de teste para verificar se a API está de pé
 @app.get("/")
 def read_root():
     return {"mensagem": "API - Dashboard MEI está funcionando!"}
 
-
 # pela própria API: acesse http://localhost:8000/app/
 app.mount("/app", StaticFiles(directory=BASE_DIR / "frontend", html=True), name="frontend")
-
 
 # Exemplo da nossa primeira rota de negócio: lista todos os clientes cadastrados no banco de dados
 @app.get("/clientes")
@@ -60,17 +66,14 @@ def listar_clientes():
     if not conn:
         raise HTTPException(status_code=500, detail="Erro na conectar com o banco de dados")
     
-    cursor = conn.cursor(dictionary=True) # Nesse campo fazemos o true retornar um dict, vai nos permitir retornar um json com mais facilidade
+    cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT id, nome, email, telefone, cnpj_cpf, criado_em FROM Clientes")
     clientes = cursor.fetchall()
     
     cursor.close()
     conn.close()
     
-    return clientes
-
-
-### Vamos definir o modelo de dados que a API espera receber do Front-End para cadastrar um novo cliente. Para isso, vamos criar uma classe que herda de BaseModel do Pydantic.
+    return clientes if clientes else []
 
 ### 1. Definindo o modelo de dados para cadastro de clientes
 class ClienteCreate(BaseModel):
@@ -89,16 +92,12 @@ def criar_cliente(cliente: ClienteCreate):
     
     cursor = conn.cursor()
 
-    # Query parametrizada (%s) para evitar SQL Injection (Segurança em 1º lugar!)
     sql = """
         INSERT INTO Clientes (nome, email, senha_hash, telefone, cnpj_cpf)
         VALUES (%s, %s, %s, %s, %s)
     """
 
-    # Para este passo inicial, vamos simular um hash apenas para preencher o banco.
-    # Vamos implementar posteriormente uma biblioteca "bcrypt" para gerar um hash seguro.
     senha_simulada_hash = f"hash_seguro_de_{cliente.senha}"
-
     valores = (cliente.nome, cliente.email, senha_simulada_hash, cliente.telefone, cliente.cnpj_cpf)
 
     try:
@@ -107,7 +106,6 @@ def criar_cliente(cliente: ClienteCreate):
         novo_id = cursor.lastrowid
     except mysql.connector.IntegrityError:
         conn.rollback()
-        # Captura erros como "E-mail já cadastrado" (porque colocamos UNIQUE lá no SQL)
         raise HTTPException(status_code=400, detail="E-mail ou Documento já cadastrado.")
     except Exception as err:
         conn.rollback()
@@ -117,7 +115,6 @@ def criar_cliente(cliente: ClienteCreate):
         conn.close()
 
     return {"mensagem": "Cliente cadastrado com sucesso!", "id_cliente": novo_id}
-
 
 #### 1. Modelo Pydantic para validar os dados do Contrato
 class ContratoCreate(BaseModel):
@@ -167,7 +164,6 @@ def criar_contrato(contrato: ContratoCreate):
 
     return {"mensagem": "Contrato gerado com sucesso!", "id_contrato": novo_id}
 
-
 # feat: lista todos os contratos (com o nome do cliente). Aceita ?limit=5 para os mais recentes.
 @app.get("/contratos")
 def listar_contratos(limit: int | None = None):
@@ -191,8 +187,7 @@ def listar_contratos(limit: int | None = None):
 
     cursor.close()
     conn.close()
-    return contratos
-
+    return contratos if contratos else []
 
 @app.get("/contratos/{cliente_id}")
 def listar_contratos_cliente(cliente_id: int):
@@ -200,11 +195,8 @@ def listar_contratos_cliente(cliente_id: int):
     if not conn:
         raise HTTPException(status_code=500, detail="Erro de conexão com o banco")
 
-    ## NAO MEXE, NAO SEI OQ FIZ TA DANDO CERTO E ESTA DEVOLVENDO O JSON DIRETO, MAS NAO SEI OQ FIZ, NAO MEXE ##
-
     cursor = conn.cursor(dictionary=True)
 
-    ## VAI BUSCAR OS CONTRATOS DA URL EU ACHO, DEVE SER O ID DO CLIENTE ##
     sql = "SELECT id, titulo, descricao, valor_total, status, data_inicio, data_termino, link_minuta FROM Contratos WHERE cliente_id = %s"
 
     cursor.execute(sql, (cliente_id,))
@@ -213,13 +205,10 @@ def listar_contratos_cliente(cliente_id: int):
     cursor.close()
     conn.close()
 
-    ### AQUI SO RETORNA O ERRO 404 SE DAR RUIM ###
-
     if not contratos:
         raise HTTPException(status_code=404, detail="Nenhum contrato encontrado para este cliente.")
 
     return contratos
-
 
 class PrazoCreate(BaseModel):
     contrato_id: int
@@ -227,10 +216,8 @@ class PrazoCreate(BaseModel):
     data_limite: date
     status: str = "Pendente"  # Valor padrão
 
-
 class PrazoStatusUpdate(BaseModel):
     status: str
-
 
 class GastoCreate(BaseModel):
     contrato_id: int
@@ -239,10 +226,10 @@ class GastoCreate(BaseModel):
     data_gasto: date
     comprovante_url: str | None = None
 
-
 ### ========================================== ###
 ### ROTAS DE PRAZOS ###
 ### ========================================== ###
+@app.post("/prazos", status_code=201)
 def criar_prazo(prazo: PrazoCreate):
     conn = get_db_connection()
     if not conn:
@@ -265,7 +252,6 @@ def criar_prazo(prazo: PrazoCreate):
 
     return {"mensagem": "Prazo registrado!", "id_prazo": novo_id}
 
-
 # feat: lista todos os prazos, do mais próximo ao mais distante
 @app.get("/prazos")
 def listar_prazos():
@@ -281,8 +267,7 @@ def listar_prazos():
     prazos = cursor.fetchall()
     cursor.close()
     conn.close()
-    return prazos
-
+    return prazos if prazos else []
 
 # feat: atualiza o status de um prazo (ex.: marcar como Concluído)
 @app.patch("/prazos/{prazo_id}")
@@ -293,7 +278,6 @@ def atualizar_prazo(prazo_id: int, dados: PrazoStatusUpdate):
         cursor.execute("UPDATE Prazos SET status = %s WHERE id = %s", (dados.status, prazo_id))
         conn.commit()
         if cursor.rowcount == 0:
-            # rowcount 0 também ocorre se o status já era o mesmo; confirmamos se o prazo existe
             cursor.execute("SELECT id FROM Prazos WHERE id = %s", (prazo_id,))
             if not cursor.fetchone():
                 raise HTTPException(status_code=404, detail="Prazo não encontrado.")
@@ -304,7 +288,6 @@ def atualizar_prazo(prazo_id: int, dados: PrazoStatusUpdate):
         cursor.close()
         conn.close()
     return {"mensagem": "Prazo atualizado!"}
-
 
 ### ========================================== ###
 ### ROTAS DE GASTOS ###
@@ -332,7 +315,6 @@ def criar_gasto(gasto: GastoCreate):
 
     return {"mensagem": "Gasto registrado com sucesso!", "id_gasto": novo_id}
 
-
 # feat: lista os gastos mais recentes
 @app.get("/gastos")
 def listar_gastos():
@@ -348,8 +330,7 @@ def listar_gastos():
     gastos = cursor.fetchall()
     cursor.close()
     conn.close()
-    return gastos
-
+    return gastos if gastos else []
 
 ### ========================================== ###
 ### VISÃO GERAL (números do painel) ###
@@ -395,19 +376,53 @@ def resumo_dashboard():
     cursor.close()
     conn.close()
 
+    # Forçamos o tipo para "dict" e usamos "# type: ignore" para calar o falso positivo do VS Code
+    dados_clientes: dict = clientes or {}  # type: ignore
+    dados_contratos: dict = contratos or {}  # type: ignore
+    dados_prazos: dict = prazos or {}  # type: ignore
+    dados_gastos: dict = gastos or {}  # type: ignore
+
     return {
-        "clientes": {"total": int(clientes["total"]), "novos_mes": int(clientes["novos_mes"])},
+        "clientes": {
+            "total": int(dados_clientes.get("total", 0)), 
+            "novos_mes": int(dados_clientes.get("novos_mes", 0))
+        },
         "contratos": {
-            "em_andamento": int(contratos["em_andamento"]),
-            "encerram_30d": int(contratos["encerram_30d"]),
+            "em_andamento": int(dados_contratos.get("em_andamento", 0)),
+            "encerram_30d": int(dados_contratos.get("encerram_30d", 0)),
         },
         "prazos": {
-            "proximos": int(prazos["proximos"]),
-            "vencem_semana": int(prazos["vencem_semana"]),
-            "atrasados": int(prazos["atrasados"]),
+            "proximos": int(dados_prazos.get("proximos", 0)),
+            "vencem_semana": int(dados_prazos.get("vencem_semana", 0)),
+            "atrasados": int(dados_prazos.get("atrasados", 0)),
         },
         "gastos": {
-            "mes_atual": float(gastos["mes_atual"]),
-            "mes_anterior": float(gastos["mes_anterior"]),
+            "mes_atual": float(dados_gastos.get("mes_atual", 0.0)),
+            "mes_anterior": float(dados_gastos.get("mes_anterior", 0.0)),
         },
     }
+
+### ========================================== ###
+### ROTA DO CHATBOT (INTEGRAÇÃO GEMINI) ###
+### ========================================== ###
+
+class ChatRequest(BaseModel):
+    mensagem: str
+
+@app.post("/chat")
+def conversar_com_ia(req: ChatRequest):
+    try:
+        resposta = client.models.generate_content(
+            model="gemini-1.5-flash",
+            contents=req.mensagem,
+            config=types.GenerateContentConfig(
+                system_instruction=(
+                    "Você é o assistente virtual do Conecta.ai, um sistema de gestão para Microempreendedores Individuais (MEI). "
+                    "Seu objetivo é ajudar no atendimento primário dos clientes, respondendo dúvidas de forma educada, clara, objetiva e profissional. "
+                    "Nunca invente valores, prazos ou dados de contratos caso não os tenha. Se não souber a resposta, peça para o cliente aguardar o contato do gestor."
+                )
+            )
+        )
+        return {"resposta": resposta.text}
+    except Exception as err:
+        raise HTTPException(status_code=500, detail=f"Erro ao processar IA: {err}")
