@@ -10,3 +10,9 @@ __pycache__/
 build/
 dist/
 *.log
+
+# Configurações locais do VS Code
+.vscode/
+
+# Exportação local do banco
+mei_dashboard.sql
