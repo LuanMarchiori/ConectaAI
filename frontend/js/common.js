@@ -1,6 +1,6 @@
 (function () {
   "use strict";
-  const API = location.protocol.startsWith('http') ? location.origin : 'http://localhost:8000';
+  const API = '';
 
   const $toast = document.getElementById('toast');
   let toastTimer;
