@@ -61,6 +61,32 @@
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
 
+<!-- ========================================== -->
+<!-- WIDGET DO CHATBOT GEMINI                   -->
+<!-- ========================================== -->
+<button id="btnChat" class="btn" style="position: fixed; bottom: 24px; right: 24px; border-radius: 50px; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+  💬 Assistente IA
+</button>
+
+<div id="janelaChat" class="panel" style="display: none; position: fixed; bottom: 80px; right: 24px; width: 340px; height: 450px; z-index: 100; flex-direction: column; padding: 0; box-shadow: 0 8px 24px rgba(0,0,0,0.2); overflow: hidden;">
+  <div class="panel-head" style="padding: 16px; margin: 0; background: var(--line); display: flex; justify-content: space-between; align-items: center;">
+    <h2 style="font-size: 16px; margin: 0;">Conecta.ai Assistente</h2>
+    <button id="fecharChat" style="background: none; border: none; cursor: pointer; color: var(--slate); font-size: 16px; padding: 4px;">✖</button>
+  </div>
+  
+  <div id="mensagensChat" style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; font-size: 14px;">
+    <div style="background: var(--amber-wash); color: var(--amber-ink); padding: 12px; border-radius: 8px; align-self: flex-start; max-width: 85%; line-height: 1.4;">
+      Olá! Sou o assistente de IA do Conecta.ai. Como posso ajudar com a gestão hoje?
+    </div>
+  </div>
+  
+  <form id="formChat" style="display: flex; padding: 12px; border-top: 1px solid var(--line); gap: 8px; background: var(--panel);">
+    <input type="text" id="inputChat" placeholder="Digite sua dúvida..." required style="flex: 1; border-radius: 20px; padding: 8px 14px;">
+    <button type="submit" class="btn" id="btnEnviarChat" style="border-radius: 50%; padding: 8px 12px;">➤</button>
+  </form>
+</div>
+
+<!-- Scripts carregados uma única vez no final do body -->
 <script src="js/common.js"></script>
 <script src="js/index.js"></script>
 </body>
