@@ -9,3 +9,4 @@ venv/
 # VS Code / IDEs
 .vscode/
 .idea/
+.env
