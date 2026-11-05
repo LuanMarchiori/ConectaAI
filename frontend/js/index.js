@@ -1,152 +1,450 @@
-/* Página: Visão geral (index.html) */
 (function () {
-  "use strict";
-  const { api, esc, initials, brl, fmtData, hojeISO, daquiADias, badge, estaConcluido, mostrarErro, limparErro } = App;
-  const $ = id => document.getElementById(id);
+    "use strict";
 
-  async function carregar() {
-    try {
-      const [d, recentes, prazos] = await Promise.all([
-        api('/dashboard'), api('/contratos?limit=5'), api('/prazos'),
-      ]);
-      limparErro();
+    const {
+        api, esc, brl, fmtData, hojeISO, daquiADias,
+        badge, estaConcluido, statusPrazo,
+        ligarForm, mostrarErro, limparErro, tabela, link
+    } = window.App;
 
-      // ----- Números do topo -----
-      $('statClientes').textContent = d.clientes.total;
-      $('deltaClientes').textContent = `+${d.clientes.novos_mes} este mês`;
+    const $ = id => document.getElementById(id);
 
-      $('statContratos').textContent = d.contratos.em_andamento;
-      $('deltaContratos').textContent = `${d.contratos.encerram_30d} encerram em 30 dias`;
-
-      $('statPrazos').textContent = d.prazos.proximos;
-      const v = d.prazos.vencem_semana, a = d.prazos.atrasados;
-      $('deltaPrazos').textContent =
-        `${v} vence${v === 1 ? '' : 'm'} esta semana` + (a ? ` · ${a} atrasado${a === 1 ? '' : 's'}` : '');
-
-      const g = d.gastos;
-      $('statGastos').textContent = brl(g.mes_atual);
-      const dg = $('deltaGastos');
-      if (g.mes_anterior > 0) {
-        const pct = Math.round((g.mes_atual - g.mes_anterior) / g.mes_anterior * 100);
-        dg.textContent = `${pct >= 0 ? '+' : ''}${pct}% vs. mês anterior`;
-        dg.classList.toggle('warn', pct > 0);
-      } else {
-        dg.textContent = 'sem gastos no mês anterior';
-        dg.classList.remove('warn');
-      }
-
-      // ----- Contratos recentes -----
-      $('contratosRecentes').innerHTML = recentes.length ? `
-        <table>
-          <thead><tr><th>Cliente</th><th>Contrato</th><th>Valor</th><th>Status</th></tr></thead>
-          <tbody>
-            ${recentes.map(c => `
-            <tr>
-              <td class="name-cell"><span class="avatar">${esc(initials(c.cliente_nome))}</span>${esc(c.cliente_nome)}</td>
-              <td class="strong">${esc(c.titulo)}</td>
-              <td class="mono">${brl(c.valor_total)}</td>
-              <td>${badge(c.status)}</td>
-            </tr>`).join('')}
-          </tbody>
-        </table>` : `<div class="empty">Nenhum contrato cadastrado ainda.</div>`;
-
-      // ----- Prazos dos próximos 7 dias -----
-      const hoje = hojeISO(), lim = daquiADias(7);
-      const daSemana = prazos.filter(p => {
-        const dt = String(p.data_limite).slice(0, 10);
-        return !estaConcluido(p) && dt >= hoje && dt <= lim;
-      });
-      $('prazosSemana').innerHTML = daSemana.length ? `
-        <table>
-          <thead><tr><th>Entrega</th><th>Vence</th></tr></thead>
-          <tbody>
-            ${daSemana.map(p => `
-            <tr><td class="strong">${esc(p.descricao)}<span class="sub">${esc(p.contrato_titulo)} · #${p.contrato_id}</span></td><td class="mono">${fmtData(p.data_limite, true)}</td></tr>`).join('')}
-          </tbody>
-        </table>` : `<div class="empty">Nenhum prazo vencendo nesta semana.</div>`;
-    } catch (e) {
-      mostrarErro(e, carregar);
+    function definirTexto(id, texto) {
+        const elemento = $(id);
+        if (elemento) elemento.textContent = texto;
     }
-  }
 
-  // ========================================== //
-  // LÓGICA DO CHATBOT GEMINI                   //
-  // ========================================== //
-  const btnChat = $('btnChat');
-  const janelaChat = $('janelaChat');
-  const fecharChat = $('fecharChat');
-  const formChat = $('formChat');
-  const inputChat = $('inputChat');
-  const mensagensChat = $('mensagensChat');
-  const btnEnviarChat = $('btnEnviarChat');
-
-  // Alterna a visibilidade da janela
-  if (btnChat) {
-      btnChat.addEventListener('click', () => {
-        janelaChat.style.display = janelaChat.style.display === 'none' ? 'flex' : 'none';
-        if (janelaChat.style.display === 'flex') inputChat.focus();
-      });
-  }
-  
-  if(fecharChat) {
-      fecharChat.addEventListener('click', () => janelaChat.style.display = 'none');
-  }
-
-  // Função para adicionar balões de mensagem na tela
-  function addMensagem(texto, remetente) {
-    const div = document.createElement('div');
-    div.style.padding = '12px';
-    div.style.borderRadius = '8px';
-    div.style.maxWidth = '85%';
-    div.style.lineHeight = '1.4';
-
-    if (remetente === 'usuario') {
-      div.style.background = 'var(--ink)';
-      div.style.color = 'var(--paper)';
-      div.style.alignSelf = 'flex-end';
-    } else {
-      div.style.background = 'var(--amber-wash)';
-      div.style.color = 'var(--amber-ink)';
-      div.style.alignSelf = 'flex-start';
-    }
-    
-    // Converte quebras de linha em <br> para manter a formatação
-    div.innerHTML = esc(texto).replace(/\n/g, '<br>');
-    mensagensChat.appendChild(div);
-    mensagensChat.scrollTop = mensagensChat.scrollHeight;
-  }
-
-  // Envia a mensagem para a API
-  if (formChat) {
-      formChat.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const msg = inputChat.value.trim();
-        if (!msg) return;
-
-        // Coloca a mensagem do usuário na tela e bloqueia o input temporariamente
-        addMensagem(msg, 'usuario');
-        inputChat.value = '';
-        inputChat.disabled = true;
-        btnEnviarChat.disabled = true;
-
-        try {
-          // Faz a requisição POST para a nossa rota do FastAPI
-          const resp = await api('/chat', {
+    function enviar(endpoint, fd) {
+        return api(endpoint, {
             method: 'POST',
-            body: JSON.stringify({ mensagem: msg })
-          });
-          addMensagem(resp.resposta, 'ia');
-        } catch (err) {
-          addMensagem('Desculpe, ocorreu um erro ao contactar a IA.', 'ia');
-          console.error(err);
-        } finally {
-          inputChat.disabled = false;
-          btnEnviarChat.disabled = false;
-          inputChat.focus();
-        }
-      });
-  }
+            body: JSON.stringify(Object.fromEntries(fd.entries()))
+        });
+    }
 
-  // Inicia o carregamento da página
-  carregar();
+    function preencherSelect(id, registros, rotulo, primeiraOpcao) {
+        const select = $(id);
+        if (!select) return;
+
+        const valorAnterior = select.value;
+
+        select.innerHTML =
+            `<option value="">${esc(primeiraOpcao)}</option>` +
+            registros.map(registro => `
+                <option value="${esc(registro.id)}">
+                    ${esc(rotulo(registro))}
+                </option>
+            `).join('');
+
+        if (registros.some(r => String(r.id) === valorAnterior)) {
+            select.value = valorAnterior;
+        }
+    }
+
+    function linhasContratos(registros) {
+        return registros.map(c => `
+            <tr>
+                <td>${esc(c.cliente_nome || '—')}</td>
+                <td>
+                    ${esc(c.titulo)}
+                    ${c.descricao
+                        ? `<br><small>${esc(c.descricao)}</small>`
+                        : ''}
+                </td>
+                <td>${brl(c.valor_total)}</td>
+                <td>${badge(c.status)}</td>
+                <td>${fmtData(c.data_inicio)}</td>
+                <td>${fmtData(c.data_termino)}</td>
+                <td>${link(c.link_minuta, 'Abrir')}</td>
+            </tr>
+        `);
+    }
+
+    async function iniciarClientes() {
+        async function carregar() {
+            try {
+                const clientes = await api('/api/clientes');
+
+                definirTexto(
+                    'contagem',
+                    `${clientes.length} cliente(s) cadastrado(s).`
+                );
+
+                $('listaClientes').innerHTML = tabela(
+                    ['Nome', 'Contato', 'Documento', 'Desde'],
+                    clientes.map(c => `
+                        <tr>
+                            <td>${esc(c.nome)}</td>
+                            <td>
+                                ${esc(c.email)}
+                                ${c.telefone
+                                    ? `<br><small>${esc(c.telefone)}</small>`
+                                    : ''}
+                            </td>
+                            <td>${esc(c.cnpj_cpf || '—')}</td>
+                            <td>${fmtData(c.criado_em)}</td>
+                        </tr>
+                    `),
+                    'Nenhum cliente cadastrado.'
+                );
+
+                limparErro();
+            } catch (erro) {
+                mostrarErro(erro, carregar);
+            }
+        }
+
+        ligarForm(
+            'formCliente',
+            fd => enviar('/api/clientes', fd),
+            carregar
+        );
+
+        await carregar();
+    }
+
+    async function iniciarContratos() {
+        let contratos = [];
+
+        function renderizar() {
+            const clienteId = $('filtroCliente')?.value || '';
+
+            const filtrados = clienteId
+                ? contratos.filter(c => String(c.cliente_id) === clienteId)
+                : contratos;
+
+            $('listaContratos').innerHTML = tabela(
+                ['Cliente', 'Título', 'Valor', 'Status', 'Início', 'Término', 'Minuta'],
+                linhasContratos(filtrados),
+                'Nenhum contrato encontrado.'
+            );
+        }
+
+        async function carregar() {
+            try {
+                const [clientes, lista] = await Promise.all([
+                    api('/api/clientes'),
+                    api('/api/contratos')
+                ]);
+
+                contratos = lista;
+
+                preencherSelect(
+                    'selCliente',
+                    clientes,
+                    c => c.nome,
+                    'Selecione um cliente'
+                );
+
+                preencherSelect(
+                    'filtroCliente',
+                    clientes,
+                    c => c.nome,
+                    'Todos os clientes'
+                );
+
+                $('formContrato').hidden = clientes.length === 0;
+
+                if ($('semClientes')) {
+                    $('semClientes').hidden = clientes.length > 0;
+                }
+
+                renderizar();
+                limparErro();
+            } catch (erro) {
+                mostrarErro(erro, carregar);
+            }
+        }
+
+        $('filtroCliente')?.addEventListener('change', renderizar);
+
+        ligarForm(
+            'formContrato',
+            fd => enviar('/api/contratos', fd),
+            carregar
+        );
+
+        await carregar();
+    }
+
+    async function iniciarPrazos() {
+        async function carregar() {
+            try {
+                const [contratos, prazos] = await Promise.all([
+                    api('/api/contratos'),
+                    api('/api/prazos')
+                ]);
+
+                preencherSelect(
+                    'selContrato',
+                    contratos,
+                    c => `#${c.id} · ${c.titulo} (${c.cliente_nome || '—'})`,
+                    'Selecione um contrato'
+                );
+
+                $('formPrazo').hidden = contratos.length === 0;
+
+                if ($('semContratos')) {
+                    $('semContratos').hidden = contratos.length > 0;
+                }
+
+                $('listaPrazos').innerHTML = tabela(
+                    ['Descrição', 'Contrato', 'Vence', 'Status'],
+                    prazos.map(p => `
+                        <tr>
+                            <td>${esc(p.descricao)}</td>
+                            <td>
+                                #${esc(p.contrato_id)}
+                                <br>
+                                <small>${esc(p.contrato_titulo || '—')}</small>
+                            </td>
+                            <td>${fmtData(p.data_limite)}</td>
+                            <td>${badge(statusPrazo(p))}</td>
+                        </tr>
+                    `),
+                    'Nenhum prazo cadastrado.'
+                );
+
+                limparErro();
+            } catch (erro) {
+                mostrarErro(erro, carregar);
+            }
+        }
+
+        ligarForm(
+            'formPrazo',
+            fd => enviar('/api/prazos', fd),
+            carregar
+        );
+
+        await carregar();
+    }
+
+    async function iniciarGastos() {
+        function definirData() {
+            if ($('dataGasto')) {
+                $('dataGasto').value = hojeISO();
+            }
+        }
+
+        async function carregar() {
+            try {
+                const [contratos, gastos] = await Promise.all([
+                    api('/api/contratos'),
+                    api('/api/gastos')
+                ]);
+
+                preencherSelect(
+                    'selContrato',
+                    contratos,
+                    c => `#${c.id} · ${c.titulo} (${c.cliente_nome || '—'})`,
+                    'Selecione um contrato'
+                );
+
+                $('formGasto').hidden = contratos.length === 0;
+
+                if ($('semContratos')) {
+                    $('semContratos').hidden = contratos.length > 0;
+                }
+
+                const total = gastos.reduce(
+                    (soma, gasto) => soma + Number(gasto.valor || 0),
+                    0
+                );
+
+                $('listaGastos').innerHTML = `
+                    <p>Total registrado: ${brl(total)}</p>
+                    ${tabela(
+                        ['Descrição', 'Contrato', 'Valor', 'Data', 'Comprovante'],
+                        gastos.map(g => `
+                            <tr>
+                                <td>${esc(g.descricao)}</td>
+                                <td>
+                                    #${esc(g.contrato_id)}
+                                    <br>
+                                    <small>${esc(g.contrato_titulo || '—')}</small>
+                                </td>
+                                <td>${brl(g.valor)}</td>
+                                <td>${fmtData(g.data_gasto)}</td>
+                                <td>${link(g.comprovante_url, 'Abrir')}</td>
+                            </tr>
+                        `),
+                        'Nenhum gasto cadastrado.'
+                    )}
+                `;
+
+                limparErro();
+            } catch (erro) {
+                mostrarErro(erro, carregar);
+            }
+        }
+
+        ligarForm(
+            'formGasto',
+            fd => enviar('/api/gastos', fd),
+            async () => {
+                definirData();
+                await carregar();
+            }
+        );
+
+        definirData();
+        await carregar();
+    }
+
+    async function iniciarDashboard() {
+        async function carregar() {
+            try {
+                const [d, contratos, prazos] = await Promise.all([
+                    api('/api/dashboard'),
+                    api('/api/contratos?limit=5'),
+                    api('/api/prazos')
+                ]);
+
+                definirTexto('statClientes', d.clientes.total);
+                definirTexto(
+                    'deltaClientes',
+                    `+${d.clientes.novos_mes} este mês`
+                );
+
+                definirTexto('statContratos', d.contratos.em_andamento);
+                definirTexto(
+                    'deltaContratos',
+                    `${d.contratos.encerram_30d} encerram em 30 dias`
+                );
+
+                definirTexto('statPrazos', d.prazos.proximos);
+                definirTexto(
+                    'deltaPrazos',
+                    `${d.prazos.vencem_semana} nos próximos 7 dias` +
+                    ` · ${d.prazos.atrasados} atrasados`
+                );
+
+                definirTexto('statGastos', brl(d.gastos.mes_atual));
+
+                if (d.gastos.mes_anterior > 0) {
+                    const variacao = Math.round(
+                        (
+                            (d.gastos.mes_atual - d.gastos.mes_anterior) /
+                            d.gastos.mes_anterior
+                        ) * 100
+                    );
+
+                    definirTexto(
+                        'deltaGastos',
+                        `${variacao >= 0 ? '+' : ''}${variacao}% vs. mês anterior`
+                    );
+
+                    $('deltaGastos')?.classList.toggle('warn', variacao > 0);
+                } else {
+                    definirTexto(
+                        'deltaGastos',
+                        'Sem gastos no mês anterior'
+                    );
+
+                    $('deltaGastos')?.classList.remove('warn');
+                }
+
+                $('contratosRecentes').innerHTML = tabela(
+                    ['Cliente', 'Contrato', 'Valor', 'Status'],
+                    contratos.map(c => `
+                        <tr>
+                            <td>${esc(c.cliente_nome || '—')}</td>
+                            <td>${esc(c.titulo)}</td>
+                            <td>${brl(c.valor_total)}</td>
+                            <td>${badge(c.status)}</td>
+                        </tr>
+                    `),
+                    'Nenhum contrato cadastrado.'
+                );
+
+                const hoje = hojeISO();
+                const fim = daquiADias(7);
+
+                const proximos = prazos
+                    .filter(p => {
+                        const limite = String(p.data_limite || '').slice(0, 10);
+
+                        return (
+                            !estaConcluido(p) &&
+                            limite >= hoje &&
+                            limite < fim
+                        );
+                    })
+                    .sort((a, b) =>
+                        String(a.data_limite).localeCompare(String(b.data_limite))
+                    );
+
+                $('prazosSemana').innerHTML = tabela(
+                    ['Entrega', 'Vence'],
+                    proximos.map(p => `
+                        <tr>
+                            <td>
+                                ${esc(p.descricao)}
+                                <br>
+                                <small>
+                                    ${esc(p.contrato_titulo || '—')}
+                                    · #${esc(p.contrato_id)}
+                                </small>
+                            </td>
+                            <td>${fmtData(p.data_limite, true)}</td>
+                        </tr>
+                    `),
+                    'Nenhum prazo pendente nos próximos 7 dias.'
+                );
+
+                limparErro();
+            } catch (erro) {
+                mostrarErro(erro, carregar);
+            }
+        }
+
+        // Mantém a abertura e o fechamento visual do chat.
+        // Nenhuma API de IA foi adicionada neste ajuste.
+        $('btnChat')?.addEventListener('click', () => {
+            const janela = $('janelaChat');
+            if (!janela) return;
+
+            const visivel = getComputedStyle(janela).display !== 'none';
+
+            janela.hidden = visivel;
+            janela.style.display = visivel ? 'none' : 'flex';
+        });
+
+        $('fecharChat')?.addEventListener('click', () => {
+            const janela = $('janelaChat');
+            if (!janela) return;
+
+            janela.hidden = true;
+            janela.style.display = 'none';
+        });
+
+        $('formChat')?.addEventListener('submit', evento => {
+            evento.preventDefault();
+
+            window.App.toast(
+                'O assistente de IA não está conectado a uma API neste ajuste.',
+                true
+            );
+        });
+
+        await carregar();
+    }
+
+    async function iniciar() {
+        if ($('formCliente')) return iniciarClientes();
+        if ($('formContrato')) return iniciarContratos();
+        if ($('formPrazo')) return iniciarPrazos();
+        if ($('formGasto')) return iniciarGastos();
+        if ($('statClientes')) return iniciarDashboard();
+    }
+
+    function executar() {
+        iniciar().catch(erro => mostrarErro(erro, executar));
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', executar, { once: true });
+    } else {
+        executar();
+    }
 })();
