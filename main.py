@@ -1,429 +1,561 @@
 import os
-from datetime import date
+import sys
+import threading
+from contextlib import contextmanager
+from datetime import date, datetime, timedelta
+from decimal import Decimal
 from pathlib import Path
 
 import mysql.connector
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
-
 from dotenv import load_dotenv
-from google import genai
-from google.genai import types
+from flask import Flask, jsonify, request, send_from_directory
+from werkzeug.exceptions import HTTPException
+from werkzeug.security import generate_password_hash
+from werkzeug.serving import make_server
+from typing import Any, cast
 
-# Carrega as variáveis de ambiente do arquivo .env
-load_dotenv()
+from PySide6.QtCore import QUrl
+from PySide6.QtWidgets import QApplication, QMainWindow
+from PySide6.QtWebEngineWidgets import QWebEngineView
 
-# Inicia o cliente da nova biblioteca
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-
-app = FastAPI(title="API - Dashboard MEI")
-
-# em produção precisamos trocar o "*" pelo link real.
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR / ".env")
 
-# Cria uma função para conectar ao meu banco do MySQL (Dinâmica para Nuvem/Local)
+FRONTEND_DIR = BASE_DIR / "frontend"
+
+app = Flask(
+    __name__,
+    static_folder=str(FRONTEND_DIR),
+    static_url_path=""
+)
+
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
+
+
 def get_db_connection():
-    try:
-        conn = mysql.connector.connect(
-            host=os.getenv("DB_HOST", "localhost"),
-            user=os.getenv("DB_USER", "root"),
-            password=os.getenv("DB_PASS", "r6mc0ilfL@"),
-            database=os.getenv("DB_NAME", "mei_dashboard"),
-            port=os.getenv("DB_PORT", 3306)
-        )
-        return conn
-    except mysql.connector.Error as err:
-        print(f"Erro na conexão: {err}")
-        return None
-
-# feat: atalho para testar a conexão dos novos blocos
-def conectar_ou_erro():
-    conn = get_db_connection()
-    if not conn:
-        raise HTTPException(status_code=500, detail="Erro de conexão com o banco")
-    return conn
-
-# Rota de teste para verificar se a API está de pé
-@app.get("/")
-def read_root():
-    return {"mensagem": "API - Dashboard MEI está funcionando!"}
-
-# pela própria API: acesse http://localhost:8000/app/
-app.mount("/app", StaticFiles(directory=BASE_DIR / "frontend", html=True), name="frontend")
-
-# Exemplo da nossa primeira rota de negócio: lista todos os clientes cadastrados no banco de dados
-@app.get("/clientes")
-def listar_clientes():
-    conn = get_db_connection()
-    if not conn:
-        raise HTTPException(status_code=500, detail="Erro na conectar com o banco de dados")
-    
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT id, nome, email, telefone, cnpj_cpf, criado_em FROM Clientes")
-    clientes = cursor.fetchall()
-    
-    cursor.close()
-    conn.close()
-    
-    return clientes if clientes else []
-
-### 1. Definindo o modelo de dados para cadastro de clientes
-class ClienteCreate(BaseModel):
-    nome: str
-    email: str
-    senha: str
-    telefone: str | None = None
-    cnpj_cpf: str | None = None
-
-# 2. Criamos o endpoint POST
-@app.post("/clientes", status_code=201)
-def criar_cliente(cliente: ClienteCreate):
-    conn = get_db_connection()
-    if not conn:
-        raise HTTPException(status_code=500, detail="Erro de conexão com o banco")
-    
-    cursor = conn.cursor()
-
-    sql = """
-        INSERT INTO Clientes (nome, email, senha_hash, telefone, cnpj_cpf)
-        VALUES (%s, %s, %s, %s, %s)
-    """
-
-    senha_simulada_hash = f"hash_seguro_de_{cliente.senha}"
-    valores = (cliente.nome, cliente.email, senha_simulada_hash, cliente.telefone, cliente.cnpj_cpf)
-
-    try:
-        cursor.execute(sql, valores)
-        conn.commit()  # Confirma a gravação no banco
-        novo_id = cursor.lastrowid
-    except mysql.connector.IntegrityError:
-        conn.rollback()
-        raise HTTPException(status_code=400, detail="E-mail ou Documento já cadastrado.")
-    except Exception as err:
-        conn.rollback()
-        raise HTTPException(status_code=500, detail=f"Erro interno: {err}")
-    finally:
-        cursor.close()
-        conn.close()
-
-    return {"mensagem": "Cliente cadastrado com sucesso!", "id_cliente": novo_id}
-
-#### 1. Modelo Pydantic para validar os dados do Contrato
-class ContratoCreate(BaseModel):
-    cliente_id: int
-    titulo: str
-    descricao: str | None = None
-    valor_total: float
-    data_inicio: date | None = None
-    data_termino: date | None = None
-    link_minuta: str | None = None
-
-# 2. Endpoint POST para criar o Contrato
-@app.post("/contratos", status_code=201)
-def criar_contrato(contrato: ContratoCreate):
-    conn = get_db_connection()
-    if not conn:
-        raise HTTPException(status_code=500, detail="Erro de conexão com o banco")
-    
-    cursor = conn.cursor()
-
-    sql = """
-        INSERT INTO Contratos
-        (cliente_id, titulo, descricao, valor_total, data_inicio, data_termino, link_minuta)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
-    """
-
-    valores = (
-        contrato.cliente_id,
-        contrato.titulo,
-        contrato.descricao,
-        contrato.valor_total,
-        contrato.data_inicio,
-        contrato.data_termino,
-        contrato.link_minuta,
+    return mysql.connector.connect(
+        host=os.getenv("DB_HOST", "127.0.0.1"),
+        port=int(os.getenv("DB_PORT", "3306")),
+        user=os.getenv("DB_USER", "root"),
+        password=os.getenv("DB_PASSWORD", ""),
+        database=os.getenv("DB_NAME", "mei_dashboard"),
+        connection_timeout=5
     )
 
-    try:
-        cursor.execute(sql, valores)
-        conn.commit()
-        novo_id = cursor.lastrowid
-    except mysql.connector.Error as err:
-        conn.rollback()
-        raise HTTPException(status_code=400, detail=f"Erro ao cadastrar contrato: {err}")
-    finally:
-        cursor.close()
-        conn.close()
 
-    return {"mensagem": "Contrato gerado com sucesso!", "id_contrato": novo_id}
-
-# feat: lista todos os contratos (com o nome do cliente). Aceita ?limit=5 para os mais recentes.
-@app.get("/contratos")
-def listar_contratos(limit: int | None = None):
-    conn = conectar_ou_erro()
-    cursor = conn.cursor(dictionary=True)
-
-    sql = """
-        SELECT c.id, c.cliente_id, cl.nome AS cliente_nome, c.titulo, c.descricao,
-               c.valor_total, c.status, c.data_inicio, c.data_termino, c.link_minuta
-        FROM Contratos c
-        JOIN Clientes cl ON cl.id = c.cliente_id
-        ORDER BY c.id DESC
-    """
-    params = ()
-    if limit:
-        sql += " LIMIT %s"
-        params = (limit,)
-
-    cursor.execute(sql, params)
-    contratos = cursor.fetchall()
-
-    cursor.close()
-    conn.close()
-    return contratos if contratos else []
-
-@app.get("/contratos/{cliente_id}")
-def listar_contratos_cliente(cliente_id: int):
+@contextmanager
+def banco():
     conn = get_db_connection()
-    if not conn:
-        raise HTTPException(status_code=500, detail="Erro de conexão com o banco")
-
-    cursor = conn.cursor(dictionary=True)
-
-    sql = "SELECT id, titulo, descricao, valor_total, status, data_inicio, data_termino, link_minuta FROM Contratos WHERE cliente_id = %s"
-
-    cursor.execute(sql, (cliente_id,))
-    contratos = cursor.fetchall()
-
-    cursor.close()
-    conn.close()
-
-    if not contratos:
-        raise HTTPException(status_code=404, detail="Nenhum contrato encontrado para este cliente.")
-
-    return contratos
-
-class PrazoCreate(BaseModel):
-    contrato_id: int
-    descricao: str
-    data_limite: date
-    status: str = "Pendente"  # Valor padrão
-
-class PrazoStatusUpdate(BaseModel):
-    status: str
-
-class GastoCreate(BaseModel):
-    contrato_id: int
-    descricao: str
-    valor: float
-    data_gasto: date
-    comprovante_url: str | None = None
-
-### ========================================== ###
-### ROTAS DE PRAZOS ###
-### ========================================== ###
-@app.post("/prazos", status_code=201)
-def criar_prazo(prazo: PrazoCreate):
-    conn = get_db_connection()
-    if not conn:
-        raise HTTPException(status_code=500, detail="Erro de conexão com o banco")
-
-    cursor = conn.cursor()
-    sql = "INSERT INTO Prazos (contrato_id, descricao, data_limite, status) VALUES (%s, %s, %s, %s)"
-    valores = (prazo.contrato_id, prazo.descricao, prazo.data_limite, prazo.status)
+    cursor = None
 
     try:
-        cursor.execute(sql, valores)
-        conn.commit()
-        novo_id = cursor.lastrowid
-    except mysql.connector.Error as err:
+        cursor = conn.cursor(dictionary=True)
+        yield conn, cursor
+    except Exception:
         conn.rollback()
-        raise HTTPException(status_code=400, detail=f"Erro ao cadastrar prazo: {err}")
+        raise
     finally:
-        cursor.close()
-        conn.close()
+        try:
+            if cursor is not None:
+                cursor.close()
+        finally:
+            conn.close()
 
-    return {"mensagem": "Prazo registrado!", "id_prazo": novo_id}
 
-# feat: lista todos os prazos, do mais próximo ao mais distante
-@app.get("/prazos")
-def listar_prazos():
-    conn = conectar_ou_erro()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("""
-        SELECT p.id, p.contrato_id, c.titulo AS contrato_titulo,
-               p.descricao, p.data_limite, p.status
-        FROM Prazos p
-        JOIN Contratos c ON c.id = p.contrato_id
-        ORDER BY p.data_limite ASC
-    """)
-    prazos = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return prazos if prazos else []
+def serializar(valor):
+    if isinstance(valor, dict):
+        return {k: serializar(v) for k, v in valor.items()}
 
-# feat: atualiza o status de um prazo (ex.: marcar como Concluído)
-@app.patch("/prazos/{prazo_id}")
-def atualizar_prazo(prazo_id: int, dados: PrazoStatusUpdate):
-    conn = conectar_ou_erro()
-    cursor = conn.cursor()
+    if isinstance(valor, (list, tuple)):
+        return [serializar(v) for v in valor]
+
+    if isinstance(valor, (datetime, date)):
+        return valor.isoformat()
+
+    if isinstance(valor, Decimal):
+        return float(valor)
+
+    return valor
+
+
+def resposta(valor, status=200):
+    return jsonify(serializar(valor)), status
+
+
+def dados_recebidos():
+    dados = request.get_json(silent=True)
+
+    if dados is None:
+        dados = request.form
+
+    if not hasattr(dados, "get"):
+        raise ValueError("Envie um objeto JSON válido.")
+
+    return dados
+
+
+def texto(dados, chave, padrao=""):
+    valor = dados.get(chave)
+    return str(valor).strip() if valor is not None else padrao
+
+
+def obrigatorio(dados, chave, rotulo):
+    valor = texto(dados, chave)
+
+    if not valor:
+        raise ValueError(f"{rotulo} é obrigatório.")
+
+    return valor
+
+
+def inteiro_positivo(valor, rotulo):
     try:
-        cursor.execute("UPDATE Prazos SET status = %s WHERE id = %s", (dados.status, prazo_id))
-        conn.commit()
-        if cursor.rowcount == 0:
-            cursor.execute("SELECT id FROM Prazos WHERE id = %s", (prazo_id,))
-            if not cursor.fetchone():
-                raise HTTPException(status_code=404, detail="Prazo não encontrado.")
-    except mysql.connector.Error as err:
-        conn.rollback()
-        raise HTTPException(status_code=400, detail=f"Erro ao atualizar prazo: {err}")
-    finally:
-        cursor.close()
-        conn.close()
-    return {"mensagem": "Prazo atualizado!"}
+        numero = int(valor)
+    except (TypeError, ValueError):
+        raise ValueError(f"{rotulo} inválido.")
 
-### ========================================== ###
-### ROTAS DE GASTOS ###
-### ========================================== ###
-@app.post("/gastos", status_code=201)
-def criar_gasto(gasto: GastoCreate):
-    conn = get_db_connection()
-    if not conn:
-        raise HTTPException(status_code=500, detail="Erro de conexão com o banco")
+    if numero <= 0:
+        raise ValueError(f"{rotulo} inválido.")
 
-    cursor = conn.cursor()
-    sql = "INSERT INTO Gastos (contrato_id, descricao, valor, data_gasto, comprovante_url) VALUES (%s, %s, %s, %s, %s)"
-    valores = (gasto.contrato_id, gasto.descricao, gasto.valor, gasto.data_gasto, gasto.comprovante_url)
+    return numero
+
+
+def data_valida(valor, rotulo, obrigatoria=False):
+    if not valor:
+        if obrigatoria:
+            raise ValueError(f"{rotulo} é obrigatória.")
+        return None
 
     try:
-        cursor.execute(sql, valores)
-        conn.commit()
-        novo_id = cursor.lastrowid
-    except mysql.connector.Error as err:
-        conn.rollback()
-        raise HTTPException(status_code=400, detail=f"Erro ao cadastrar gasto: {err}")
-    finally:
-        cursor.close()
-        conn.close()
+        return date.fromisoformat(str(valor))
+    except ValueError:
+        raise ValueError(f"{rotulo} deve estar no formato AAAA-MM-DD.")
 
-    return {"mensagem": "Gasto registrado com sucesso!", "id_gasto": novo_id}
 
-# feat: lista os gastos mais recentes
-@app.get("/gastos")
-def listar_gastos():
-    conn = conectar_ou_erro()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("""
-        SELECT g.id, g.contrato_id, c.titulo AS contrato_titulo,
-               g.descricao, g.valor, g.data_gasto, g.comprovante_url
-        FROM Gastos g
-        JOIN Contratos c ON c.id = g.contrato_id
-        ORDER BY g.data_gasto DESC, g.id DESC
-    """)
-    gastos = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return gastos if gastos else []
+def dinheiro(valor):
+    bruto = str(valor if valor is not None else "").strip()
 
-### ========================================== ###
-### VISÃO GERAL (números do painel) ###
-### ========================================== ###
-@app.get("/dashboard")
-def resumo_dashboard():
-    conn = conectar_ou_erro()
-    cursor = conn.cursor(dictionary=True)
+    if not bruto:
+        raise ValueError("Informe o valor.")
 
-    cursor.execute("""
-        SELECT COUNT(*) AS total,
-               COALESCE(SUM(YEAR(criado_em) = YEAR(CURDATE()) AND MONTH(criado_em) = MONTH(CURDATE())), 0) AS novos_mes
-        FROM Clientes
-    """)
-    clientes = cursor.fetchone()
+    if "," in bruto:
+        bruto = bruto.replace(".", "").replace(",", ".")
 
-    cursor.execute("""
-        SELECT COALESCE(SUM(LOWER(status) LIKE '%andamento%' OR LOWER(status) LIKE '%ativo%'), 0) AS em_andamento,
-               COALESCE(SUM((LOWER(status) LIKE '%andamento%' OR LOWER(status) LIKE '%ativo%')
-                            AND data_termino BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)), 0) AS encerram_30d
-        FROM Contratos
-    """)
-    contratos = cursor.fetchone()
+    try:
+        numero = Decimal(bruto)
+    except Exception:
+        raise ValueError("Valor monetário inválido.")
 
-    cursor.execute("""
-        SELECT COALESCE(SUM(status <> 'Concluído' AND data_limite >= CURDATE()), 0) AS proximos,
-               COALESCE(SUM(status <> 'Concluído' AND data_limite BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)), 0) AS vencem_semana,
-               COALESCE(SUM(status <> 'Concluído' AND data_limite < CURDATE()), 0) AS atrasados
-        FROM Prazos
-    """)
-    prazos = cursor.fetchone()
+    if not numero.is_finite() or numero < 0:
+        raise ValueError("O valor deve ser um número maior ou igual a zero.")
 
-    cursor.execute("""
-        SELECT COALESCE(SUM(CASE WHEN YEAR(data_gasto) = YEAR(CURDATE()) AND MONTH(data_gasto) = MONTH(CURDATE())
-                                 THEN valor END), 0) AS mes_atual,
-               COALESCE(SUM(CASE WHEN YEAR(data_gasto) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 MONTH))
-                                  AND MONTH(data_gasto) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH))
-                                 THEN valor END), 0) AS mes_anterior
-        FROM Gastos
-    """)
-    gastos = cursor.fetchone()
+    return numero.quantize(Decimal("0.01"))
 
-    cursor.close()
-    conn.close()
 
-    # Forçamos o tipo para "dict" e usamos "# type: ignore" para calar o falso positivo do VS Code
-    dados_clientes: dict = clientes or {}  # type: ignore
-    dados_contratos: dict = contratos or {}  # type: ignore
-    dados_prazos: dict = prazos or {}  # type: ignore
-    dados_gastos: dict = gastos or {}  # type: ignore
+def conferir_registro(cursor, tabela, registro_id, rotulo):
+    # Os nomes das tabelas vêm exclusivamente do próprio código.
+    cursor.execute(
+        f"SELECT id FROM `{tabela}` WHERE id = %s",
+        (registro_id,)
+    )
 
-    return {
+    if cursor.fetchone() is None:
+        raise ValueError(f"{rotulo} não encontrado.")
+
+
+@app.after_request
+def sem_cache(response):
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@app.errorhandler(ValueError)
+def erro_validacao(erro):
+    return resposta({"error": str(erro)}, 400)
+
+
+@app.errorhandler(mysql.connector.Error)
+def erro_mysql(erro):
+    app.logger.exception("Falha no MySQL")
+    return resposta({"error": str(erro)}, 500)
+
+
+@app.errorhandler(HTTPException)
+def erro_http(erro):
+    if request.path.startswith("/api/"):
+        return resposta({"error": erro.description}, erro.code)
+
+    return erro
+
+
+@app.errorhandler(Exception)
+def erro_inesperado(erro):
+    app.logger.exception("Erro inesperado")
+
+    if request.path.startswith("/api/"):
+        return resposta({"error": "Erro interno. Consulte o terminal."}, 500)
+
+    return "Erro interno. Consulte o terminal.", 500
+
+
+# ---------------- PÁGINAS HTML ----------------
+
+@app.route("/")
+def pagina_inicial():
+    return send_from_directory(FRONTEND_DIR, "index.html")
+
+
+@app.route("/<pagina>")
+def pagina_html(pagina):
+    nome = pagina.removesuffix(".html")
+
+    if nome in {"index", "clientes", "contratos", "prazos", "gastos"}:
+        return send_from_directory(FRONTEND_DIR, f"{nome}.html")
+
+    from flask import abort
+    abort(404)
+
+
+# ---------------- CLIENTES ----------------
+
+@app.route("/api/clientes", methods=["GET", "POST"])
+def api_clientes():
+    with banco() as (conn, cursor):
+        if request.method == "POST":
+            dados = dados_recebidos()
+
+            nome = obrigatorio(dados, "nome", "Nome")
+            email = obrigatorio(dados, "email", "E-mail")
+            senha = texto(dados, "senha") or texto(dados, "senha_provisoria")
+
+            cursor.execute("""
+                INSERT INTO clientes (
+                    nome, email, senha_hash, telefone, cnpj_cpf
+                )
+                VALUES (%s, %s, %s, %s, %s)
+            """, (
+                nome,
+                email,
+                generate_password_hash(senha) if senha else "",
+                texto(dados, "telefone") or None,
+                texto(dados, "cnpj_cpf") or None
+            ))
+
+            novo_id = cursor.lastrowid
+            conn.commit()
+
+            return resposta({
+                "message": "Cliente cadastrado com sucesso!",
+                "id": novo_id
+            }, 201)
+
+        cursor.execute("""
+            SELECT id, nome, email, telefone, cnpj_cpf, criado_em
+            FROM clientes
+            ORDER BY id DESC
+        """)
+
+        return resposta(cursor.fetchall())
+
+
+# ---------------- CONTRATOS ----------------
+
+@app.route("/api/contratos", methods=["GET", "POST"])
+def api_contratos():
+    with banco() as (conn, cursor):
+        if request.method == "POST":
+            dados = dados_recebidos()
+
+            cliente_id = inteiro_positivo(
+                dados.get("cliente_id"), "Cliente"
+            )
+            titulo = obrigatorio(dados, "titulo", "Título")
+
+            inicio = data_valida(
+                dados.get("data_inicio"), "Data de início"
+            )
+            termino = data_valida(
+                dados.get("data_termino"), "Data de término"
+            )
+
+            if inicio and termino and termino < inicio:
+                raise ValueError(
+                    "A data de término não pode ser anterior ao início."
+                )
+
+            conferir_registro(cursor, "clientes", cliente_id, "Cliente")
+
+            cursor.execute("""
+                INSERT INTO contratos (
+                    cliente_id, titulo, descricao, valor_total,
+                    link_minuta, status, data_inicio, data_termino
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                cliente_id,
+                titulo,
+                texto(dados, "descricao"),
+                dinheiro(dados.get("valor_total") or "0"),
+                texto(dados, "link_minuta") or None,
+                texto(dados, "status") or "Em Análise",
+                inicio,
+                termino
+            ))
+
+            novo_id = cursor.lastrowid
+            conn.commit()
+
+            return resposta({
+                "message": "Contrato cadastrado com sucesso!",
+                "id": novo_id
+            }, 201)
+
+        sql = """
+            SELECT c.*, cl.nome AS cliente_nome
+            FROM contratos c
+            LEFT JOIN clientes cl ON cl.id = c.cliente_id
+        """
+        parametros = []
+
+        cliente_id = request.args.get("cliente_id")
+        if cliente_id:
+            sql += " WHERE c.cliente_id = %s"
+            parametros.append(inteiro_positivo(cliente_id, "Cliente"))
+
+        sql += " ORDER BY c.id DESC"
+
+        limite = request.args.get("limit")
+        if limite:
+            limite = min(inteiro_positivo(limite, "Limite"), 500)
+            sql += " LIMIT %s"
+            parametros.append(limite)
+
+        cursor.execute(sql, tuple(parametros))
+        return resposta(cursor.fetchall())
+
+
+# ---------------- PRAZOS ----------------
+
+@app.route("/api/prazos", methods=["GET", "POST"])
+def api_prazos():
+    with banco() as (conn, cursor):
+        if request.method == "POST":
+            dados = dados_recebidos()
+
+            contrato_id = inteiro_positivo(
+                dados.get("contrato_id"), "Contrato"
+            )
+            descricao = obrigatorio(dados, "descricao", "Descrição")
+            limite = data_valida(
+                dados.get("data_limite"), "Data limite", True
+            )
+
+            conferir_registro(cursor, "contratos", contrato_id, "Contrato")
+
+            cursor.execute("""
+                INSERT INTO prazos (
+                    contrato_id, descricao, data_limite, status
+                )
+                VALUES (%s, %s, %s, %s)
+            """, (
+                contrato_id,
+                descricao,
+                limite,
+                texto(dados, "status") or "Pendente"
+            ))
+
+            novo_id = cursor.lastrowid
+            conn.commit()
+
+            return resposta({
+                "message": "Prazo cadastrado com sucesso!",
+                "id": novo_id
+            }, 201)
+
+        cursor.execute("""
+            SELECT p.*, c.titulo AS contrato_titulo
+            FROM prazos p
+            LEFT JOIN contratos c ON c.id = p.contrato_id
+            ORDER BY p.data_limite ASC, p.id DESC
+        """)
+
+        return resposta(cursor.fetchall())
+
+
+# ---------------- GASTOS ----------------
+
+@app.route("/api/gastos", methods=["GET", "POST"])
+def api_gastos():
+    with banco() as (conn, cursor):
+        if request.method == "POST":
+            dados = dados_recebidos()
+
+            contrato_id = inteiro_positivo(
+                dados.get("contrato_id"), "Contrato"
+            )
+            descricao = obrigatorio(dados, "descricao", "Descrição")
+            data_gasto = data_valida(
+                dados.get("data_gasto"), "Data do gasto", True
+            )
+
+            conferir_registro(cursor, "contratos", contrato_id, "Contrato")
+
+            cursor.execute("""
+                INSERT INTO gastos (
+                    contrato_id, descricao, valor,
+                    data_gasto, comprovante_url
+                )
+                VALUES (%s, %s, %s, %s, %s)
+            """, (
+                contrato_id,
+                descricao,
+                dinheiro(dados.get("valor")),
+                data_gasto,
+                texto(dados, "comprovante_url") or None
+            ))
+
+            novo_id = cursor.lastrowid
+            conn.commit()
+
+            return resposta({
+                "message": "Gasto cadastrado com sucesso!",
+                "id": novo_id
+            }, 201)
+
+        cursor.execute("""
+            SELECT g.*, c.titulo AS contrato_titulo
+            FROM gastos g
+            LEFT JOIN contratos c ON c.id = g.contrato_id
+            ORDER BY g.data_gasto DESC, g.id DESC
+        """)
+
+        return resposta(cursor.fetchall())
+
+
+# ---------------- DASHBOARD ----------------
+
+@app.route("/api/dashboard", methods=["GET"])
+def api_dashboard():
+    hoje = date.today()
+    inicio_mes = hoje.replace(day=1)
+    inicio_anterior = (inicio_mes - timedelta(days=1)).replace(day=1)
+
+    if hoje.month == 12:
+        proximo_mes = date(hoje.year + 1, 1, 1)
+    else:
+        proximo_mes = date(hoje.year, hoje.month + 1, 1)
+
+    with banco() as (_, cursor):
+        cursor.execute("""
+            SELECT
+                COUNT(*) AS total,
+                COALESCE(SUM(
+                    criado_em >= %s AND criado_em < %s
+                ), 0) AS novos_mes
+            FROM clientes
+        """, (inicio_mes, proximo_mes))
+        clientes = cast(dict[str, Any], cursor.fetchone())
+
+        cursor.execute("""
+            SELECT
+                COALESCE(SUM(
+                    status IN ('Em Análise', 'Ativo', 'Em Andamento')
+                ), 0) AS em_andamento,
+                COALESCE(SUM(
+                    status IN ('Em Análise', 'Ativo', 'Em Andamento')
+                    AND data_termino BETWEEN %s AND %s
+                ), 0) AS encerram_30d
+            FROM contratos
+        """, (hoje, hoje + timedelta(days=30)))
+        contratos = cast(dict[str, Any], cursor.fetchone())
+
+        cursor.execute("""
+            SELECT
+                COALESCE(SUM(
+                    COALESCE(status, 'Pendente') <> 'Concluído'
+                    AND data_limite >= %s
+                    AND data_limite < %s
+                ), 0) AS proximos,
+                COALESCE(SUM(
+                    COALESCE(status, 'Pendente') <> 'Concluído'
+                    AND data_limite < %s
+                ), 0) AS atrasados
+            FROM prazos
+        """, (hoje, hoje + timedelta(days=7), hoje))
+        prazos = cast(dict[str, Any], cursor.fetchone())
+
+        cursor.execute("""
+            SELECT
+                COALESCE(SUM(CASE
+                    WHEN data_gasto >= %s AND data_gasto < %s
+                    THEN valor ELSE 0
+                END), 0) AS mes_atual,
+                COALESCE(SUM(CASE
+                    WHEN data_gasto >= %s AND data_gasto < %s
+                    THEN valor ELSE 0
+                END), 0) AS mes_anterior
+            FROM gastos
+        """, (
+            inicio_mes, proximo_mes,
+            inicio_anterior, inicio_mes
+        ))
+        gastos = cast(dict[str, Any], cursor.fetchone())
+
+    return resposta({
         "clientes": {
-            "total": int(dados_clientes.get("total", 0)), 
-            "novos_mes": int(dados_clientes.get("novos_mes", 0))
+            "total": int(clientes["total"]),
+            "novos_mes": int(clientes["novos_mes"])
         },
         "contratos": {
-            "em_andamento": int(dados_contratos.get("em_andamento", 0)),
-            "encerram_30d": int(dados_contratos.get("encerram_30d", 0)),
+            "em_andamento": int(contratos["em_andamento"]),
+            "encerram_30d": int(contratos["encerram_30d"])
         },
         "prazos": {
-            "proximos": int(dados_prazos.get("proximos", 0)),
-            "vencem_semana": int(dados_prazos.get("vencem_semana", 0)),
-            "atrasados": int(dados_prazos.get("atrasados", 0)),
+            "proximos": int(prazos["proximos"]),
+            "vencem_semana": int(prazos["proximos"]),
+            "atrasados": int(prazos["atrasados"])
         },
         "gastos": {
-            "mes_atual": float(dados_gastos.get("mes_atual", 0.0)),
-            "mes_anterior": float(dados_gastos.get("mes_anterior", 0.0)),
-        },
-    }
+            "mes_atual": float(gastos["mes_atual"]),
+            "mes_anterior": float(gastos["mes_anterior"])
+        }
+    })
 
-### ========================================== ###
-### ROTA DO CHATBOT (INTEGRAÇÃO GEMINI) ###
-### ========================================== ###
 
-class ChatRequest(BaseModel):
-    mensagem: str
+# ---------------- JANELA DESKTOP ----------------
 
-@app.post("/chat")
-def conversar_com_ia(req: ChatRequest):
-    try:
-        resposta = client.models.generate_content(
-            model="gemini-1.5-flash",
-            contents=req.mensagem,
-            config=types.GenerateContentConfig(
-                system_instruction=(
-                    "Você é o assistente virtual do Conecta.ai, um sistema de gestão para Microempreendedores Individuais (MEI). "
-                    "Seu objetivo é ajudar no atendimento primário dos clientes, respondendo dúvidas de forma educada, clara, objetiva e profissional. "
-                    "Nunca invente valores, prazos ou dados de contratos caso não os tenha. Se não souber a resposta, peça para o cliente aguardar o contato do gestor."
-                )
-            )
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Sistema de Gestão MEI")
+        self.resize(1280, 720)
+
+        self.browser = QWebEngineView()
+        self.setCentralWidget(self.browser)
+        self.browser.setUrl(QUrl("http://127.0.0.1:5000/"))
+
+
+if __name__ == "__main__":
+    if not (FRONTEND_DIR / "index.html").is_file():
+        raise SystemExit(
+            f"Não encontrei index.html na pasta: {FRONTEND_DIR}"
         )
-        return {"resposta": resposta.text}
-    except Exception as err:
-        raise HTTPException(status_code=500, detail=f"Erro ao processar IA: {err}")
+
+    # Cria o servidor antes de abrir a janela.
+    # Se a porta estiver ocupada, não abre outra janela ligada ao processo antigo.
+    servidor = make_server("127.0.0.1", 5000, app, threaded=True)
+    thread = threading.Thread(target=servidor.serve_forever, daemon=True)
+    thread.start()
+
+    qt_app = QApplication(sys.argv)
+    janela = MainWindow()
+    janela.show()
+
+    try:
+        codigo_saida = qt_app.exec()
+    finally:
+        servidor.shutdown()
+        servidor.server_close()
+
+    sys.exit(codigo_saida)
