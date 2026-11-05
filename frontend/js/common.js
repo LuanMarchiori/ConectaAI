@@ -1,133 +1,279 @@
 (function () {
-  "use strict";
-  const API = '';
+    "use strict";
 
-  const $toast = document.getElementById('toast');
-  let toastTimer;
+    const $ = id => document.getElementById(id);
+    let toastTimer;
 
-  /* ---------- Utilidades ---------- */
-  function esc(v) {
-    return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  }
-  function initials(name) {
-    return String(name || '?').split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
-  }
-  function brl(v) {
-    return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  }
-  // Datas da API chegam como "2026-09-23" (ou ISO completo). Formata sem sofrer com fuso horário.
-  function fmtData(v, curta) {
-    if (!v) return '—';
-    const [y, m, d] = String(v).slice(0, 10).split('-');
-    return curta ? `${d}/${m}` : `${d}/${m}/${y}`;
-  }
-  function paraISO(d) {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  }
-  function hojeISO() { return paraISO(new Date()); }
-  function daquiADias(n) { const d = new Date(); d.setDate(d.getDate() + n); return paraISO(d); }
-  function nulo(v) { v = (v || '').trim(); return v === '' ? null : v; }
-  // Lê um campo de FormData como texto
-  function campo(fd, k) { return (fd.get(k) || '').toString(); }
-
-  /* ---------- Avisos ---------- */
-  function toast(msg, erro) {
-    if (!$toast) return;
-    clearTimeout(toastTimer);
-    $toast.textContent = msg;
-    $toast.classList.toggle('err', !!erro);
-    $toast.classList.add('show');
-    toastTimer = setTimeout(() => $toast.classList.remove('show'), 4200);
-  }
-
-  /* ---------- Chamadas à API ---------- */
-  async function api(path, options) {
-    let res;
-    try {
-      res = await fetch(API + path, {
-        headers: { 'Content-Type': 'application/json' },
-        ...options,
-      });
-    } catch (e) {
-      throw new Error('Não foi possível conectar à API. Verifique se o servidor está rodando.');
+    function esc(valor) {
+        return String(valor ?? '').replace(/[&<>"']/g, caractere => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[caractere]));
     }
-    if (!res.ok) {
-      let detail = '';
-      try { detail = (await res.json()).detail; } catch (e) { /* sem corpo */ }
-      if (Array.isArray(detail)) detail = 'Verifique os campos preenchidos.';
-      const err = new Error(detail || `Erro ${res.status}`);
-      err.status = res.status;
-      throw err;
+
+    function initials(nome) {
+        return String(nome || '?')
+            .split(/\s+/)
+            .filter(Boolean)
+            .slice(0, 2)
+            .map(parte => parte[0])
+            .join('')
+            .toUpperCase();
     }
-    return res.json();
-  }
 
-  /* ---------- Status ---------- */
-  function statusClasse(s) {
-    const t = String(s || '').toLowerCase();
-    if (t.includes('conclu') || t.includes('pago')) return 'concluido';
-    if (t.includes('atras') || t.includes('cancel')) return 'atrasado';
-    if (t.includes('andamento') || t.includes('ativo')) return 'ativo';
-    return 'pendente';
-  }
-  function badge(s) { return `<span class="badge ${statusClasse(s)}">${esc(s || '—')}</span>`; }
-  function estaConcluido(p) { return String(p.status).toLowerCase().includes('conclu'); }
+    function brl(valor) {
+        return Number(valor || 0).toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+        });
+    }
 
-  // Prazo não concluído com data anterior a hoje aparece como "Atrasado"
-  function statusPrazo(p) {
-    if (!estaConcluido(p) && String(p.data_limite).slice(0, 10) < hojeISO()) return 'Atrasado';
-    return p.status;
-  }
+    function paraISO(data) {
+        return [
+            data.getFullYear(),
+            String(data.getMonth() + 1).padStart(2, '0'),
+            String(data.getDate()).padStart(2, '0')
+        ].join('-');
+    }
 
-  /* ---------- Formulários ---------- */
-  // Envia um formulário: bloqueia o botão, mostra aviso e recarrega os dados em caso de sucesso
-  function ligarForm(id, enviar, aoSucesso) {
-    const form = document.getElementById(id);
-    if (!form) return;
-    form.addEventListener('submit', async ev => {
-      ev.preventDefault();
-      const btn = form.querySelector('button[type=submit]');
-      btn.disabled = true;
-      try {
-        const resp = await enviar(new FormData(form));
-        toast(resp.mensagem || 'Salvo com sucesso!');
-        form.reset();
-        if (aoSucesso) await aoSucesso();
-      } catch (e) {
-        toast(e.message, true);
-      } finally {
-        btn.disabled = false;
-      }
+    function hojeISO() {
+        return paraISO(new Date());
+    }
+
+    function daquiADias(numero) {
+        const data = new Date();
+        data.setDate(data.getDate() + numero);
+        return paraISO(data);
+    }
+
+    function fmtData(valor, curta = false) {
+        if (!valor) return '—';
+
+        const texto = String(valor);
+        let iso;
+
+        if (/^\d{4}-\d{2}-\d{2}/.test(texto)) {
+            iso = texto.slice(0, 10);
+        } else {
+            const data = new Date(texto);
+
+            if (Number.isNaN(data.getTime())) return '—';
+
+            iso = [
+                data.getUTCFullYear(),
+                String(data.getUTCMonth() + 1).padStart(2, '0'),
+                String(data.getUTCDate()).padStart(2, '0')
+            ].join('-');
+        }
+
+        const [ano, mes, dia] = iso.split('-');
+        return curta ? `${dia}/${mes}` : `${dia}/${mes}/${ano}`;
+    }
+
+    function campo(fd, chave) {
+        return String(fd.get(chave) ?? '').trim();
+    }
+
+    function nulo(valor) {
+        const texto = String(valor ?? '').trim();
+        return texto || null;
+    }
+
+    function toast(mensagem, erro = false) {
+        const elemento = $('toast');
+
+        if (!elemento) {
+            console[erro ? 'error' : 'log'](mensagem);
+            return;
+        }
+
+        clearTimeout(toastTimer);
+        elemento.textContent = mensagem;
+        elemento.classList.toggle('err', erro);
+        elemento.classList.add('show');
+
+        toastTimer = setTimeout(() => {
+            elemento.classList.remove('show');
+        }, 5000);
+    }
+
+    async function api(path, options = {}) {
+        const endpoint = path.startsWith('/api/')
+            ? path
+            : '/api/' + path.replace(/^\/+/, '');
+
+        let res;
+
+        try {
+            res = await fetch(endpoint, {
+                ...options,
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(options.headers || {})
+                },
+                cache: 'no-store'
+            });
+        } catch (erro) {
+            throw new Error(
+                'Não foi possível conectar ao servidor. Verifique o terminal.'
+            );
+        }
+
+        const texto = await res.text();
+        let dados;
+
+        try {
+            dados = texto ? JSON.parse(texto) : null;
+        } catch (erro) {
+            throw new Error(
+                `${endpoint} retornou conteúdo que não é JSON. HTTP ${res.status}.`
+            );
+        }
+
+        if (!res.ok) {
+            const erro = new Error(
+                dados?.error ||
+                dados?.detail ||
+                dados?.message ||
+                `Erro HTTP ${res.status}`
+            );
+
+            erro.status = res.status;
+            throw erro;
+        }
+
+        return dados;
+    }
+
+    function statusClasse(status) {
+        const texto = String(status || '').toLowerCase();
+
+        if (texto.includes('conclu') || texto.includes('pago')) {
+            return 'concluido';
+        }
+
+        if (texto.includes('atras') || texto.includes('cancel')) {
+            return 'atrasado';
+        }
+
+        if (texto.includes('andamento') || texto === 'ativo') {
+            return 'ativo';
+        }
+
+        return 'pendente';
+    }
+
+    function badge(status) {
+        return `<span class="badge ${statusClasse(status)}">${esc(status || '—')}</span>`;
+    }
+
+    function estaConcluido(prazo) {
+        return String(prazo.status || '').toLowerCase().includes('conclu');
+    }
+
+    function statusPrazo(prazo) {
+        const limite = String(prazo.data_limite || '').slice(0, 10);
+
+        if (!estaConcluido(prazo) && limite && limite < hojeISO()) {
+            return 'Atrasado';
+        }
+
+        return prazo.status || 'Pendente';
+    }
+
+    function mostrarErro(erro, tentarNovamente) {
+        console.error(erro);
+
+        const box = $('erro');
+        if (!box) return;
+
+        box.hidden = false;
+        box.style.display = 'block';
+        box.replaceChildren();
+
+        const mensagem = document.createElement('p');
+        mensagem.textContent = erro?.message || String(erro);
+        box.appendChild(mensagem);
+
+        if (typeof tentarNovamente === 'function') {
+            const botao = document.createElement('button');
+            botao.type = 'button';
+            botao.textContent = 'Tentar novamente';
+            botao.addEventListener('click', tentarNovamente);
+            box.appendChild(botao);
+        }
+    }
+
+    function limparErro() {
+        const box = $('erro');
+        if (!box) return;
+
+        box.replaceChildren();
+        box.hidden = true;
+        box.style.display = 'none';
+    }
+
+    function ligarForm(id, enviar, aoSucesso) {
+        const form = $(id);
+        if (!form) return;
+
+        form.addEventListener('submit', async evento => {
+            evento.preventDefault();
+
+            const botao = form.querySelector('button[type="submit"]');
+            if (botao) botao.disabled = true;
+
+            try {
+                const resposta = await enviar(new FormData(form));
+                toast(resposta?.message || 'Salvo com sucesso!');
+                form.reset();
+
+                if (aoSucesso) await aoSucesso();
+            } catch (erro) {
+                toast(erro.message, true);
+            } finally {
+                if (botao) botao.disabled = false;
+            }
+        });
+    }
+
+    function tabela(cabecalhos, linhas, vazio) {
+        if (!linhas.length) {
+            return `<p class="empty">${esc(vazio)}</p>`;
+        }
+
+        return `
+            <div class="table-wrap" style="overflow-x:auto">
+                <table>
+                    <thead>
+                        <tr>
+                            ${cabecalhos.map(c => `<th>${esc(c)}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>${linhas.join('')}</tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    function link(url, rotulo) {
+        if (!/^https?:\/\//i.test(String(url || ''))) return '—';
+
+        return `<a href="${esc(url)}" target="_blank"
+                   rel="noopener noreferrer">${esc(rotulo)}</a>`;
+    }
+
+    $('menuBtn')?.addEventListener('click', () => {
+        $('tabsNav')?.classList.toggle('open');
     });
-  }
 
-  /* ---------- Erro de carregamento ---------- */
-  // Mostra um painel de erro no topo da página, com botão para tentar de novo
-  function mostrarErro(e, tentarDeNovo) {
-    const box = document.getElementById('erro');
-    if (!box) return;
-    box.innerHTML = `
-      <div class="panel" style="margin-bottom:22px;">
-        <h2>Não foi possível carregar os dados</h2>
-        <p class="hint">${esc(e.message)}</p>
-        <button class="btn secondary" id="retry">Tentar novamente</button>
-      </div>`;
-    document.getElementById('retry').addEventListener('click', () => { limparErro(); tentarDeNovo(); });
-  }
-  function limparErro() {
-    const box = document.getElementById('erro');
-    if (box) box.innerHTML = '';
-  }
-
-  /* ---------- Menu do celular ---------- */
-  const menuBtn = document.getElementById('menuBtn');
-  if (menuBtn) {
-    menuBtn.addEventListener('click', () => document.getElementById('tabsNav').classList.toggle('open'));
-  }
-
-  // Tudo fica disponível para os scripts das páginas em window.App
-  window.App = {
-    api, esc, initials, brl, fmtData, hojeISO, daquiADias, nulo, campo,
-    toast, badge, estaConcluido, statusPrazo, ligarForm, mostrarErro, limparErro,
-  };
+    window.App = {
+        api, esc, initials, brl, fmtData, paraISO,
+        hojeISO, daquiADias, campo, nulo, toast,
+        statusClasse, badge, estaConcluido, statusPrazo,
+        mostrarErro, limparErro, ligarForm, tabela, link
+    };
 })();
