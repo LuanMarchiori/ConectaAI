@@ -18,11 +18,17 @@ from PySide6.QtCore import QUrl
 from PySide6.QtWidgets import QApplication, QMainWindow
 from PySide6.QtWebEngineWidgets import QWebEngineView
 
-
+# HTML, CSS e JavaScript incluídos no aplicativo.
 BASE_DIR = Path(__file__).resolve().parent
-load_dotenv(BASE_DIR / ".env")
-
 FRONTEND_DIR = BASE_DIR / "frontend"
+
+# O .env fica ao lado do executável na versão empacotada.
+if getattr(sys, "frozen", False):
+    CONFIG_DIR = Path(sys.executable).resolve().parent
+else:
+    CONFIG_DIR = BASE_DIR
+
+load_dotenv(CONFIG_DIR / ".env")
 
 app = Flask(
     __name__,
@@ -40,7 +46,8 @@ def get_db_connection():
         user=os.getenv("DB_USER", "root"),
         password=os.getenv("DB_PASSWORD", ""),
         database=os.getenv("DB_NAME", "mei_dashboard"),
-        connection_timeout=5
+        connection_timeout=5,
+        use_pure=True
     )
 
 
